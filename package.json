@@ -24,6 +24,7 @@
     "files-provider": "~0.2.0",
     "ispawn": "~0.2.0",
     "mkdirp": "~0.5.1",
+    "node-fetch": "^2.6.1",
     "opn": "~5.4.0",
     "v8-tools-core": "~0.1.1"
   },

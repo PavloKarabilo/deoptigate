@@ -134,7 +134,7 @@ module.exports = {
   CodeView
 }
 
-},{"../../lib/rendering/mark-only":66,"../../lib/rendering/marker-resolver":67,"../theme.browser":56,"assert":8,"peacock":16,"react":46,"react-dom":26,"scroll-into-view-if-needed":54}],2:[function(require,module,exports){
+},{"../../lib/rendering/mark-only":60,"../../lib/rendering/marker-resolver":61,"../theme.browser":49,"assert":8,"peacock":30,"react":46,"react-dom":43,"scroll-into-view-if-needed":48}],2:[function(require,module,exports){
 'use strict'
 
 const React = require('react')
@@ -364,7 +364,7 @@ class FilesView extends Component {
 
 module.exports = { FilesView }
 
-},{"../../lib/grouping/summarize-file":60,"assert":8,"react":46}],4:[function(require,module,exports){
+},{"../../lib/grouping/summarize-file":53,"assert":8,"react":46}],4:[function(require,module,exports){
 'use strict'
 
 const React = require('react')
@@ -686,7 +686,7 @@ module.exports = {
   SummaryView
 }
 
-},{"../../lib/log-processing/ic-state":64,"../../lib/log-processing/optimization-state":65,"../../lib/severities":68,"assert":8,"react":46,"scroll-into-view-if-needed":54}],5:[function(require,module,exports){
+},{"../../lib/log-processing/ic-state":57,"../../lib/log-processing/optimization-state":59,"../../lib/severities":62,"assert":8,"react":46,"scroll-into-view-if-needed":48}],5:[function(require,module,exports){
 'use strict'
 
 const React = require('react')
@@ -795,7 +795,7 @@ module.exports = {
   , urlFromState
 }
 
-},{"qs":20}],7:[function(require,module,exports){
+},{"qs":37}],7:[function(require,module,exports){
 'use strict'
 
 /* global history */
@@ -1076,9 +1076,11 @@ async function deoptigateRender(groupedByFile) {
 
 module.exports = deoptigateRender
 
-},{"../":57,"./components/file-details":2,"./components/files":3,"./components/summary":4,"./components/toolbar":5,"./lib/query-state":6,"react":46,"react-dom":26}],8:[function(require,module,exports){
-(function (global){
+},{"../":50,"./components/file-details":2,"./components/files":3,"./components/summary":4,"./components/toolbar":5,"./lib/query-state":6,"react":46,"react-dom":43}],8:[function(require,module,exports){
+(function (global){(function (){
 'use strict';
+
+var objectAssign = require('object-assign');
 
 // compare and isBuffer taken from https://github.com/feross/buffer/blob/680e9e5e488f22aac27599a57dc844a6315928dd/index.js
 // original notice:
@@ -1121,6 +1123,8 @@ function isBuffer(b) {
 }
 
 // based on node assert, original notice:
+// NB: The URL to the CommonJS spec is kept just for tradition.
+//     node-assert has evolved a lot since then, both in API and behavior.
 
 // http://wiki.commonjs.org/wiki/Unit_Testing/1.0
 //
@@ -1561,6 +1565,18 @@ assert.doesNotThrow = function(block, /*optional*/error, /*optional*/message) {
 
 assert.ifError = function(err) { if (err) throw err; };
 
+// Expose a strict only variant of assert
+function strict(value, message) {
+  if (!value) fail(value, true, message, '==', strict);
+}
+assert.strict = objectAssign(strict, assert, {
+  equal: assert.strictEqual,
+  deepEqual: assert.deepStrictEqual,
+  notEqual: assert.notStrictEqual,
+  notDeepEqual: assert.notDeepStrictEqual
+});
+assert.strict.strict = assert.strict;
+
 var objectKeys = Object.keys || function (obj) {
   var keys = [];
   for (var key in obj) {
@@ -1569,8 +1585,8 @@ var objectKeys = Object.keys || function (obj) {
   return keys;
 };
 
-}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"util/":11}],9:[function(require,module,exports){
+}).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{"object-assign":28,"util/":11}],9:[function(require,module,exports){
 if (typeof Object.create === 'function') {
   // implementation from standard node.js 'util' module
   module.exports = function inherits(ctor, superCtor) {
@@ -1603,7 +1619,7 @@ module.exports = function isBuffer(arg) {
     && typeof arg.readUInt8 === 'function';
 }
 },{}],11:[function(require,module,exports){
-(function (process,global){
+(function (process,global){(function (){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -2191,500 +2207,12 @@ function hasOwnProperty(obj, prop) {
   return Object.prototype.hasOwnProperty.call(obj, prop);
 }
 
-}).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./support/isBuffer":10,"_process":13,"inherits":9}],12:[function(require,module,exports){
-(function (process){
-// .dirname, .basename, and .extname methods are extracted from Node.js v8.11.1,
-// backported and transplited with Babel, with backwards-compat fixes
-
-// Copyright Joyent, Inc. and other Node contributors.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a
-// copy of this software and associated documentation files (the
-// "Software"), to deal in the Software without restriction, including
-// without limitation the rights to use, copy, modify, merge, publish,
-// distribute, sublicense, and/or sell copies of the Software, and to permit
-// persons to whom the Software is furnished to do so, subject to the
-// following conditions:
-//
-// The above copyright notice and this permission notice shall be included
-// in all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
-// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
-// USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-// resolves . and .. elements in a path array with directory names there
-// must be no slashes, empty elements, or device names (c:\) in the array
-// (so also no leading and trailing slashes - it does not distinguish
-// relative and absolute paths)
-function normalizeArray(parts, allowAboveRoot) {
-  // if the path tries to go above the root, `up` ends up > 0
-  var up = 0;
-  for (var i = parts.length - 1; i >= 0; i--) {
-    var last = parts[i];
-    if (last === '.') {
-      parts.splice(i, 1);
-    } else if (last === '..') {
-      parts.splice(i, 1);
-      up++;
-    } else if (up) {
-      parts.splice(i, 1);
-      up--;
-    }
-  }
-
-  // if the path is allowed to go above the root, restore leading ..s
-  if (allowAboveRoot) {
-    for (; up--; up) {
-      parts.unshift('..');
-    }
-  }
-
-  return parts;
-}
-
-// path.resolve([from ...], to)
-// posix version
-exports.resolve = function() {
-  var resolvedPath = '',
-      resolvedAbsolute = false;
-
-  for (var i = arguments.length - 1; i >= -1 && !resolvedAbsolute; i--) {
-    var path = (i >= 0) ? arguments[i] : process.cwd();
-
-    // Skip empty and invalid entries
-    if (typeof path !== 'string') {
-      throw new TypeError('Arguments to path.resolve must be strings');
-    } else if (!path) {
-      continue;
-    }
-
-    resolvedPath = path + '/' + resolvedPath;
-    resolvedAbsolute = path.charAt(0) === '/';
-  }
-
-  // At this point the path should be resolved to a full absolute path, but
-  // handle relative paths to be safe (might happen when process.cwd() fails)
-
-  // Normalize the path
-  resolvedPath = normalizeArray(filter(resolvedPath.split('/'), function(p) {
-    return !!p;
-  }), !resolvedAbsolute).join('/');
-
-  return ((resolvedAbsolute ? '/' : '') + resolvedPath) || '.';
-};
-
-// path.normalize(path)
-// posix version
-exports.normalize = function(path) {
-  var isAbsolute = exports.isAbsolute(path),
-      trailingSlash = substr(path, -1) === '/';
-
-  // Normalize the path
-  path = normalizeArray(filter(path.split('/'), function(p) {
-    return !!p;
-  }), !isAbsolute).join('/');
-
-  if (!path && !isAbsolute) {
-    path = '.';
-  }
-  if (path && trailingSlash) {
-    path += '/';
-  }
-
-  return (isAbsolute ? '/' : '') + path;
-};
-
-// posix version
-exports.isAbsolute = function(path) {
-  return path.charAt(0) === '/';
-};
-
-// posix version
-exports.join = function() {
-  var paths = Array.prototype.slice.call(arguments, 0);
-  return exports.normalize(filter(paths, function(p, index) {
-    if (typeof p !== 'string') {
-      throw new TypeError('Arguments to path.join must be strings');
-    }
-    return p;
-  }).join('/'));
-};
+}).call(this)}).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{"./support/isBuffer":10,"_process":33,"inherits":9}],12:[function(require,module,exports){
+function t(t){return null!=t&&"object"==typeof t&&1===t.nodeType}function e(t,e){return(!e||"hidden"!==t)&&"visible"!==t&&"clip"!==t}function n(t,n){if(t.clientHeight<t.scrollHeight||t.clientWidth<t.scrollWidth){var r=getComputedStyle(t,null);return e(r.overflowY,n)||e(r.overflowX,n)||function(t){var e=function(t){if(!t.ownerDocument||!t.ownerDocument.defaultView)return null;try{return t.ownerDocument.defaultView.frameElement}catch(t){return null}}(t);return!!e&&(e.clientHeight<t.scrollHeight||e.clientWidth<t.scrollWidth)}(t)}return!1}function r(t,e,n,r,i,o,l,d){return o<t&&l>e||o>t&&l<e?0:o<=t&&d<=n||l>=e&&d>=n?o-t-r:l>e&&d<n||o<t&&d>n?l-e+i:0}module.exports=function(e,i){var o=window,l=i.scrollMode,d=i.block,u=i.inline,h=i.boundary,c=i.skipOverflowHiddenElements,a="function"==typeof h?h:function(t){return t!==h};if(!t(e))throw new TypeError("Invalid target");for(var f=document.scrollingElement||document.documentElement,s=[],p=e;t(p)&&a(p);){if((p=p.parentNode)===f){s.push(p);break}p===document.body&&n(p)&&!n(document.documentElement)||n(p,c)&&s.push(p)}for(var m=o.visualViewport?o.visualViewport.width:innerWidth,g=o.visualViewport?o.visualViewport.height:innerHeight,w=window.scrollX||pageXOffset,v=window.scrollY||pageYOffset,W=e.getBoundingClientRect(),b=W.height,H=W.width,y=W.top,M=W.right,E=W.bottom,V=W.left,x="start"===d||"nearest"===d?y:"end"===d?E:y+b/2,I="center"===u?V+H/2:"end"===u?M:V,C=[],T=0;T<s.length;T++){var k=s[T],B=k.getBoundingClientRect(),D=B.height,O=B.width,R=B.top,X=B.right,Y=B.bottom,L=B.left;if("if-needed"===l&&y>=0&&V>=0&&E<=g&&M<=m&&y>=R&&E<=Y&&V>=L&&M<=X)return C;var S=getComputedStyle(k),j=parseInt(S.borderLeftWidth,10),N=parseInt(S.borderTopWidth,10),q=parseInt(S.borderRightWidth,10),z=parseInt(S.borderBottomWidth,10),A=0,F=0,G="offsetWidth"in k?k.offsetWidth-k.clientWidth-j-q:0,J="offsetHeight"in k?k.offsetHeight-k.clientHeight-N-z:0;if(f===k)A="start"===d?x:"end"===d?x-g:"nearest"===d?r(v,v+g,g,N,z,v+x,v+x+b,b):x-g/2,F="start"===u?I:"center"===u?I-m/2:"end"===u?I-m:r(w,w+m,m,j,q,w+I,w+I+H,H),A=Math.max(0,A+v),F=Math.max(0,F+w);else{A="start"===d?x-R-N:"end"===d?x-Y+z+J:"nearest"===d?r(R,Y,D,N,z+J,x,x+b,b):x-(R+D/2)+J/2,F="start"===u?I-L-j:"center"===u?I-(L+O/2)+G/2:"end"===u?I-X+q+G:r(L,X,O,j,q+G,I,I+H,H);var K=k.scrollLeft,P=k.scrollTop;x+=P-(A=Math.max(0,Math.min(P+A,k.scrollHeight-D+J))),I+=K-(F=Math.max(0,Math.min(K+F,k.scrollWidth-O+G)))}C.push({el:k,top:A,left:F})}return C};
 
 
-// path.relative(from, to)
-// posix version
-exports.relative = function(from, to) {
-  from = exports.resolve(from).substr(1);
-  to = exports.resolve(to).substr(1);
-
-  function trim(arr) {
-    var start = 0;
-    for (; start < arr.length; start++) {
-      if (arr[start] !== '') break;
-    }
-
-    var end = arr.length - 1;
-    for (; end >= 0; end--) {
-      if (arr[end] !== '') break;
-    }
-
-    if (start > end) return [];
-    return arr.slice(start, end - start + 1);
-  }
-
-  var fromParts = trim(from.split('/'));
-  var toParts = trim(to.split('/'));
-
-  var length = Math.min(fromParts.length, toParts.length);
-  var samePartsLength = length;
-  for (var i = 0; i < length; i++) {
-    if (fromParts[i] !== toParts[i]) {
-      samePartsLength = i;
-      break;
-    }
-  }
-
-  var outputParts = [];
-  for (var i = samePartsLength; i < fromParts.length; i++) {
-    outputParts.push('..');
-  }
-
-  outputParts = outputParts.concat(toParts.slice(samePartsLength));
-
-  return outputParts.join('/');
-};
-
-exports.sep = '/';
-exports.delimiter = ':';
-
-exports.dirname = function (path) {
-  if (typeof path !== 'string') path = path + '';
-  if (path.length === 0) return '.';
-  var code = path.charCodeAt(0);
-  var hasRoot = code === 47 /*/*/;
-  var end = -1;
-  var matchedSlash = true;
-  for (var i = path.length - 1; i >= 1; --i) {
-    code = path.charCodeAt(i);
-    if (code === 47 /*/*/) {
-        if (!matchedSlash) {
-          end = i;
-          break;
-        }
-      } else {
-      // We saw the first non-path separator
-      matchedSlash = false;
-    }
-  }
-
-  if (end === -1) return hasRoot ? '/' : '.';
-  if (hasRoot && end === 1) {
-    // return '//';
-    // Backwards-compat fix:
-    return '/';
-  }
-  return path.slice(0, end);
-};
-
-function basename(path) {
-  if (typeof path !== 'string') path = path + '';
-
-  var start = 0;
-  var end = -1;
-  var matchedSlash = true;
-  var i;
-
-  for (i = path.length - 1; i >= 0; --i) {
-    if (path.charCodeAt(i) === 47 /*/*/) {
-        // If we reached a path separator that was not part of a set of path
-        // separators at the end of the string, stop now
-        if (!matchedSlash) {
-          start = i + 1;
-          break;
-        }
-      } else if (end === -1) {
-      // We saw the first non-path separator, mark this as the end of our
-      // path component
-      matchedSlash = false;
-      end = i + 1;
-    }
-  }
-
-  if (end === -1) return '';
-  return path.slice(start, end);
-}
-
-// Uses a mixed approach for backwards-compatibility, as ext behavior changed
-// in new Node.js versions, so only basename() above is backported here
-exports.basename = function (path, ext) {
-  var f = basename(path);
-  if (ext && f.substr(-1 * ext.length) === ext) {
-    f = f.substr(0, f.length - ext.length);
-  }
-  return f;
-};
-
-exports.extname = function (path) {
-  if (typeof path !== 'string') path = path + '';
-  var startDot = -1;
-  var startPart = 0;
-  var end = -1;
-  var matchedSlash = true;
-  // Track the state of characters (if any) we see before our first dot and
-  // after any path separator we find
-  var preDotState = 0;
-  for (var i = path.length - 1; i >= 0; --i) {
-    var code = path.charCodeAt(i);
-    if (code === 47 /*/*/) {
-        // If we reached a path separator that was not part of a set of path
-        // separators at the end of the string, stop now
-        if (!matchedSlash) {
-          startPart = i + 1;
-          break;
-        }
-        continue;
-      }
-    if (end === -1) {
-      // We saw the first non-path separator, mark this as the end of our
-      // extension
-      matchedSlash = false;
-      end = i + 1;
-    }
-    if (code === 46 /*.*/) {
-        // If this is our first dot, mark it as the start of our extension
-        if (startDot === -1)
-          startDot = i;
-        else if (preDotState !== 1)
-          preDotState = 1;
-    } else if (startDot !== -1) {
-      // We saw a non-dot and non-path separator before our dot, so we should
-      // have a good chance at having a non-empty extension
-      preDotState = -1;
-    }
-  }
-
-  if (startDot === -1 || end === -1 ||
-      // We saw a non-dot character immediately before the dot
-      preDotState === 0 ||
-      // The (right-most) trimmed path component is exactly '..'
-      preDotState === 1 && startDot === end - 1 && startDot === startPart + 1) {
-    return '';
-  }
-  return path.slice(startDot, end);
-};
-
-function filter (xs, f) {
-    if (xs.filter) return xs.filter(f);
-    var res = [];
-    for (var i = 0; i < xs.length; i++) {
-        if (f(xs[i], i, xs)) res.push(xs[i]);
-    }
-    return res;
-}
-
-// String.prototype.substr - negative index don't work in IE8
-var substr = 'ab'.substr(-1) === 'b'
-    ? function (str, start, len) { return str.substr(start, len) }
-    : function (str, start, len) {
-        if (start < 0) start = str.length + start;
-        return str.substr(start, len);
-    }
-;
-
-}).call(this,require('_process'))
-},{"_process":13}],13:[function(require,module,exports){
-// shim for using process in browser
-var process = module.exports = {};
-
-// cached from whatever global is present so that test runners that stub it
-// don't break things.  But we need to wrap it in a try catch in case it is
-// wrapped in strict mode code which doesn't define any globals.  It's inside a
-// function because try/catches deoptimize in certain engines.
-
-var cachedSetTimeout;
-var cachedClearTimeout;
-
-function defaultSetTimout() {
-    throw new Error('setTimeout has not been defined');
-}
-function defaultClearTimeout () {
-    throw new Error('clearTimeout has not been defined');
-}
-(function () {
-    try {
-        if (typeof setTimeout === 'function') {
-            cachedSetTimeout = setTimeout;
-        } else {
-            cachedSetTimeout = defaultSetTimout;
-        }
-    } catch (e) {
-        cachedSetTimeout = defaultSetTimout;
-    }
-    try {
-        if (typeof clearTimeout === 'function') {
-            cachedClearTimeout = clearTimeout;
-        } else {
-            cachedClearTimeout = defaultClearTimeout;
-        }
-    } catch (e) {
-        cachedClearTimeout = defaultClearTimeout;
-    }
-} ())
-function runTimeout(fun) {
-    if (cachedSetTimeout === setTimeout) {
-        //normal enviroments in sane situations
-        return setTimeout(fun, 0);
-    }
-    // if setTimeout wasn't available but was latter defined
-    if ((cachedSetTimeout === defaultSetTimout || !cachedSetTimeout) && setTimeout) {
-        cachedSetTimeout = setTimeout;
-        return setTimeout(fun, 0);
-    }
-    try {
-        // when when somebody has screwed with setTimeout but no I.E. maddness
-        return cachedSetTimeout(fun, 0);
-    } catch(e){
-        try {
-            // When we are in I.E. but the script has been evaled so I.E. doesn't trust the global object when called normally
-            return cachedSetTimeout.call(null, fun, 0);
-        } catch(e){
-            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error
-            return cachedSetTimeout.call(this, fun, 0);
-        }
-    }
-
-
-}
-function runClearTimeout(marker) {
-    if (cachedClearTimeout === clearTimeout) {
-        //normal enviroments in sane situations
-        return clearTimeout(marker);
-    }
-    // if clearTimeout wasn't available but was latter defined
-    if ((cachedClearTimeout === defaultClearTimeout || !cachedClearTimeout) && clearTimeout) {
-        cachedClearTimeout = clearTimeout;
-        return clearTimeout(marker);
-    }
-    try {
-        // when when somebody has screwed with setTimeout but no I.E. maddness
-        return cachedClearTimeout(marker);
-    } catch (e){
-        try {
-            // When we are in I.E. but the script has been evaled so I.E. doesn't  trust the global object when called normally
-            return cachedClearTimeout.call(null, marker);
-        } catch (e){
-            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error.
-            // Some versions of I.E. have different rules for clearTimeout vs setTimeout
-            return cachedClearTimeout.call(this, marker);
-        }
-    }
-
-
-
-}
-var queue = [];
-var draining = false;
-var currentQueue;
-var queueIndex = -1;
-
-function cleanUpNextTick() {
-    if (!draining || !currentQueue) {
-        return;
-    }
-    draining = false;
-    if (currentQueue.length) {
-        queue = currentQueue.concat(queue);
-    } else {
-        queueIndex = -1;
-    }
-    if (queue.length) {
-        drainQueue();
-    }
-}
-
-function drainQueue() {
-    if (draining) {
-        return;
-    }
-    var timeout = runTimeout(cleanUpNextTick);
-    draining = true;
-
-    var len = queue.length;
-    while(len) {
-        currentQueue = queue;
-        queue = [];
-        while (++queueIndex < len) {
-            if (currentQueue) {
-                currentQueue[queueIndex].run();
-            }
-        }
-        queueIndex = -1;
-        len = queue.length;
-    }
-    currentQueue = null;
-    draining = false;
-    runClearTimeout(timeout);
-}
-
-process.nextTick = function (fun) {
-    var args = new Array(arguments.length - 1);
-    if (arguments.length > 1) {
-        for (var i = 1; i < arguments.length; i++) {
-            args[i - 1] = arguments[i];
-        }
-    }
-    queue.push(new Item(fun, args));
-    if (queue.length === 1 && !draining) {
-        runTimeout(drainQueue);
-    }
-};
-
-// v8 likes predictible objects
-function Item(fun, array) {
-    this.fun = fun;
-    this.array = array;
-}
-Item.prototype.run = function () {
-    this.fun.apply(null, this.array);
-};
-process.title = 'browser';
-process.browser = true;
-process.env = {};
-process.argv = [];
-process.version = ''; // empty string to avoid regexp issues
-process.versions = {};
-
-function noop() {}
-
-process.on = noop;
-process.addListener = noop;
-process.once = noop;
-process.off = noop;
-process.removeListener = noop;
-process.removeAllListeners = noop;
-process.emit = noop;
-process.prependListener = noop;
-process.prependOnceListener = noop;
-
-process.listeners = function (name) { return [] }
-
-process.binding = function (name) {
-    throw new Error('process.binding is not supported');
-};
-
-process.cwd = function () { return '/' };
-process.chdir = function (dir) {
-    throw new Error('process.chdir is not supported');
-};
-process.umask = function() { return 0; };
-
-},{}],14:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 (function webpackUniversalModuleDefinition(root, factory) {
 /* istanbul ignore next */
 	if(typeof exports === 'object' && typeof module === 'object')
@@ -9394,323 +8922,941 @@ return /******/ (function(modules) { // webpackBootstrap
 /******/ ])
 });
 ;
+},{}],14:[function(require,module,exports){
+/**
+ * Copyright (c) 2013-present, Facebook, Inc.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ */
+
+'use strict';
+
+var canUseDOM = !!(typeof window !== 'undefined' && window.document && window.document.createElement);
+
+/**
+ * Simple, lightweight module assisting with the detection and context of
+ * Worker. Helps avoid circular dependencies and allows code to reason about
+ * whether or not they are in a Worker, even if they never include the main
+ * `ReactWorker` dependency.
+ */
+var ExecutionEnvironment = {
+
+  canUseDOM: canUseDOM,
+
+  canUseWorkers: typeof Worker !== 'undefined',
+
+  canUseEventListeners: canUseDOM && !!(window.addEventListener || window.attachEvent),
+
+  canUseViewport: canUseDOM && !!window.screen,
+
+  isInWorker: !canUseDOM // For now, this is true - might change in the future.
+
+};
+
+module.exports = ExecutionEnvironment;
 },{}],15:[function(require,module,exports){
-;(function() {
-'use strict'
-/* global define */
+"use strict";
 
-var esprima
-var exportFn
-var toString = Object.prototype.toString
+/**
+ * Copyright (c) 2013-present, Facebook, Inc.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ * @typechecks
+ */
 
-if (typeof module === 'object' && typeof module.exports === 'object' && typeof require === 'function') {
-  // server side
-  esprima = require('esprima')
-  exportFn = function(redeyed) { module.exports = redeyed }
-  bootstrap(esprima, exportFn)
-} else if (typeof define === 'function' && define.amd) {
-  // client side
-  // amd
-  define(['esprima'], function(esprima) {
-      return bootstrap(esprima)
-  })
-} else if (typeof window === 'object') {
-  // no amd -> attach to window if it exists
-  // Note that this requires 'esprima' to be defined on the window, so that script has to be loaded first
-  window.redeyed = bootstrap(window.esprima)
+var _hyphenPattern = /-(.)/g;
+
+/**
+ * Camelcases a hyphenated string, for example:
+ *
+ *   > camelize('background-color')
+ *   < "backgroundColor"
+ *
+ * @param {string} string
+ * @return {string}
+ */
+function camelize(string) {
+  return string.replace(_hyphenPattern, function (_, character) {
+    return character.toUpperCase();
+  });
 }
 
-function bootstrap(esprima, exportFn) {
-  function isFunction(obj) {
-    return toString.call(obj) === '[object Function]'
-  }
+module.exports = camelize;
+},{}],16:[function(require,module,exports){
+/**
+ * Copyright (c) 2013-present, Facebook, Inc.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ * @typechecks
+ */
 
-  function isString(obj) {
-    return toString.call(obj) === '[object String]'
-  }
+'use strict';
 
-  function isObject(obj) {
-    return toString.call(obj) === '[object Object]'
-  }
+var camelize = require('./camelize');
 
-  function surroundWith(before, after) {
-    return function(s) { return before + s + after }
-  }
+var msPattern = /^-ms-/;
 
-  function isNonCircular(key) {
-    return key !== '_parent'
-  }
-
-  function objectizeString(value) {
-    var vals = value.split(':')
-
-    if (vals.length === 0 || vals.length > 2)      {
- throw new Error(
-        'illegal string config: ' + value +
-        '\nShould be of format "before:after"'
-      )
+/**
+ * Camelcases a hyphenated CSS property name, for example:
+ *
+ *   > camelizeStyleName('background-color')
+ *   < "backgroundColor"
+ *   > camelizeStyleName('-moz-transition')
+ *   < "MozTransition"
+ *   > camelizeStyleName('-ms-transition')
+ *   < "msTransition"
+ *
+ * As Andi Smith suggests
+ * (http://www.andismith.com/blog/2012/02/modernizr-prefixed/), an `-ms` prefix
+ * is converted to lowercase `ms`.
+ *
+ * @param {string} string
+ * @return {string}
+ */
+function camelizeStyleName(string) {
+  return camelize(string.replace(msPattern, 'ms-'));
 }
 
-    if (vals.length === 1 || vals[1].length === 0) {
-      return vals.indexOf(':') < 0 ? { _before: vals[0] } : { _after: vals[0] }
+module.exports = camelizeStyleName;
+},{"./camelize":15}],17:[function(require,module,exports){
+'use strict';
+
+/**
+ * Copyright (c) 2013-present, Facebook, Inc.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ * 
+ */
+
+var isTextNode = require('./isTextNode');
+
+/*eslint-disable no-bitwise */
+
+/**
+ * Checks if a given DOM node contains or is another DOM node.
+ */
+function containsNode(outerNode, innerNode) {
+  if (!outerNode || !innerNode) {
+    return false;
+  } else if (outerNode === innerNode) {
+    return true;
+  } else if (isTextNode(outerNode)) {
+    return false;
+  } else if (isTextNode(innerNode)) {
+    return containsNode(outerNode, innerNode.parentNode);
+  } else if ('contains' in outerNode) {
+    return outerNode.contains(innerNode);
+  } else if (outerNode.compareDocumentPosition) {
+    return !!(outerNode.compareDocumentPosition(innerNode) & 16);
+  } else {
+    return false;
+  }
+}
+
+module.exports = containsNode;
+},{"./isTextNode":25}],18:[function(require,module,exports){
+"use strict";
+
+/**
+ * Copyright (c) 2013-present, Facebook, Inc.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ * 
+ */
+
+function makeEmptyFunction(arg) {
+  return function () {
+    return arg;
+  };
+}
+
+/**
+ * This function accepts and discards inputs; it has no side effects. This is
+ * primarily useful idiomatically for overridable function endpoints which
+ * always need to be callable, since JS lacks a null-call idiom ala Cocoa.
+ */
+var emptyFunction = function emptyFunction() {};
+
+emptyFunction.thatReturns = makeEmptyFunction;
+emptyFunction.thatReturnsFalse = makeEmptyFunction(false);
+emptyFunction.thatReturnsTrue = makeEmptyFunction(true);
+emptyFunction.thatReturnsNull = makeEmptyFunction(null);
+emptyFunction.thatReturnsThis = function () {
+  return this;
+};
+emptyFunction.thatReturnsArgument = function (arg) {
+  return arg;
+};
+
+module.exports = emptyFunction;
+},{}],19:[function(require,module,exports){
+(function (process){(function (){
+/**
+ * Copyright (c) 2013-present, Facebook, Inc.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ */
+
+'use strict';
+
+var emptyObject = {};
+
+if (process.env.NODE_ENV !== 'production') {
+  Object.freeze(emptyObject);
+}
+
+module.exports = emptyObject;
+}).call(this)}).call(this,require('_process'))
+},{"_process":33}],20:[function(require,module,exports){
+'use strict';
+
+/**
+ * Copyright (c) 2013-present, Facebook, Inc.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ * @typechecks
+ */
+
+/* eslint-disable fb-www/typeof-undefined */
+
+/**
+ * Same as document.activeElement but wraps in a try-catch block. In IE it is
+ * not safe to call document.activeElement if there is nothing focused.
+ *
+ * The activeElement will be null only if the document or document body is not
+ * yet defined.
+ *
+ * @param {?DOMDocument} doc Defaults to current document.
+ * @return {?DOMElement}
+ */
+function getActiveElement(doc) /*?DOMElement*/{
+  doc = doc || (typeof document !== 'undefined' ? document : undefined);
+  if (typeof doc === 'undefined') {
+    return null;
+  }
+  try {
+    return doc.activeElement || doc.body;
+  } catch (e) {
+    return doc.body;
+  }
+}
+
+module.exports = getActiveElement;
+},{}],21:[function(require,module,exports){
+'use strict';
+
+/**
+ * Copyright (c) 2013-present, Facebook, Inc.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ * @typechecks
+ */
+
+var _uppercasePattern = /([A-Z])/g;
+
+/**
+ * Hyphenates a camelcased string, for example:
+ *
+ *   > hyphenate('backgroundColor')
+ *   < "background-color"
+ *
+ * For CSS style names, use `hyphenateStyleName` instead which works properly
+ * with all vendor prefixes, including `ms`.
+ *
+ * @param {string} string
+ * @return {string}
+ */
+function hyphenate(string) {
+  return string.replace(_uppercasePattern, '-$1').toLowerCase();
+}
+
+module.exports = hyphenate;
+},{}],22:[function(require,module,exports){
+/**
+ * Copyright (c) 2013-present, Facebook, Inc.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ * @typechecks
+ */
+
+'use strict';
+
+var hyphenate = require('./hyphenate');
+
+var msPattern = /^ms-/;
+
+/**
+ * Hyphenates a camelcased CSS property name, for example:
+ *
+ *   > hyphenateStyleName('backgroundColor')
+ *   < "background-color"
+ *   > hyphenateStyleName('MozTransition')
+ *   < "-moz-transition"
+ *   > hyphenateStyleName('msTransition')
+ *   < "-ms-transition"
+ *
+ * As Modernizr suggests (http://modernizr.com/docs/#prefixed), an `ms` prefix
+ * is converted to `-ms-`.
+ *
+ * @param {string} string
+ * @return {string}
+ */
+function hyphenateStyleName(string) {
+  return hyphenate(string).replace(msPattern, '-ms-');
+}
+
+module.exports = hyphenateStyleName;
+},{"./hyphenate":21}],23:[function(require,module,exports){
+(function (process){(function (){
+/**
+ * Copyright (c) 2013-present, Facebook, Inc.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ */
+
+'use strict';
+
+/**
+ * Use invariant() to assert state which your program assumes to be true.
+ *
+ * Provide sprintf-style format (only %s is supported) and arguments
+ * to provide information about what broke and what you were
+ * expecting.
+ *
+ * The invariant message will be stripped in production, but the invariant
+ * will remain to ensure logic does not differ in production.
+ */
+
+var validateFormat = function validateFormat(format) {};
+
+if (process.env.NODE_ENV !== 'production') {
+  validateFormat = function validateFormat(format) {
+    if (format === undefined) {
+      throw new Error('invariant requires an error message argument');
+    }
+  };
+}
+
+function invariant(condition, format, a, b, c, d, e, f) {
+  validateFormat(format);
+
+  if (!condition) {
+    var error;
+    if (format === undefined) {
+      error = new Error('Minified exception occurred; use the non-minified dev environment ' + 'for the full error message and additional helpful warnings.');
     } else {
-      return { _before: vals[0], _after: vals[1] }
+      var args = [a, b, c, d, e, f];
+      var argIndex = 0;
+      error = new Error(format.replace(/%s/g, function () {
+        return args[argIndex++];
+      }));
+      error.name = 'Invariant Violation';
     }
+
+    error.framesToPop = 1; // we don't care about invariant's own frame
+    throw error;
   }
-
-  function objectize(node) {
-    // Converts 'bef:aft' to { _before: bef, _after: aft }
-    // and resolves undefined before/after from parent or root
-
-    function resolve(value, key) {
-      // resolve before/after from root or parent if it isn't present on the current node
-      if (!value._parent) return undefined
-
-      // Immediate parent
-      if (value._parent._default && value._parent._default[key]) return value._parent._default[key]
-
-      // Root
-      var root = value._parent._parent
-      if (!root) return undefined
-
-      return root._default ? root._default[key] : undefined
-    }
-
-    function process(key) {
-      var value = node[key]
-
-      if (!value) return
-      if (isFunction(value)) return
-
-      // normalize all strings to objects
-      if (isString(value)) {
-        node[key] = value = objectizeString(value)
-      }
-
-      value._parent = node
-      if (isObject(value)) {
-        if (!value._before && !value._after) return objectize(value)
-
-        // resolve missing _before or _after from parent(s)
-        // in case we only have either one on this node
-        value._before =  value._before || resolve(value, '_before')
-        value._after  =  value._after  || resolve(value, '_after')
-
-        return
-      }
-
-      throw new Error('nodes need to be either {String}, {Object} or {Function}.' + value + ' is neither.')
-    }
-
-    // Process _default ones first so children can resolve missing before/after from them
-    if (node._default) process('_default')
-
-    Object.keys(node)
-      .filter(function(key) {
-        return isNonCircular(key)
-          && node.hasOwnProperty(key)
-          && key !== '_before'
-          && key !== '_after'
-          && key !== '_default'
-      })
-      .forEach(process)
-  }
-
-  function functionize(node) {
-    Object.keys(node)
-      .filter(function(key) {
-        return isNonCircular(key) && node.hasOwnProperty(key)
-      })
-      .forEach(function(key) {
-        var value = node[key]
-
-        if (isFunction(value)) return
-
-        if (isObject(value)) {
-          if (!value._before && !value._after) return functionize(value)
-
-          // at this point before/after were "inherited" from the parent or root
-          // (see objectize)
-          var before = value._before || ''
-          var after = value._after || ''
-
-          node[key] = surroundWith(before, after)
-          return node[key]
-        }
-      })
-  }
-
-  function normalize(root) {
-    objectize(root)
-    functionize(root)
-  }
-
-  function mergeTokensAndComments(tokens, comments) {
-    var all = {}
-
-    function addToAllByRangeStart(t) { all[ t.range[0] ] = t }
-
-    tokens.forEach(addToAllByRangeStart)
-    comments.forEach(addToAllByRangeStart)
-
-    // keys are sorted automatically
-    return Object.keys(all)
-      .map(function(k) { return all[k] })
-  }
-
-  function redeyed(code, config, opts) {
-    opts = opts || {}
-    var parser = opts.parser || esprima
-    var jsx = !!opts.jsx
-    // tokenizer doesn't support JSX at this point (esprima@4.0.0)
-    // therefore we need to generate the AST via the parser not only to
-    // avoid the tokenizer from erroring but also to get JSXIdentifier tokens
-    var buildAst = jsx || !!opts.buildAst
-
-    var hashbang =  ''
-    var ast
-    var tokens
-    var comments
-    var lastSplitEnd = 0
-    var splits = []
-    var transformedCode
-    var all
-    var info
-
-    // Replace hashbang line with empty whitespaces to preserve token locations
-    if (code[0] === '#' && code[1] === '!') {
-      hashbang = code.substr(0, code.indexOf('\n') + 1)
-      code = Array.apply(0, Array(hashbang.length)).join(' ') + '\n' + code.substr(hashbang.length)
-    }
-
-    if (buildAst) {
-      ast = parser.parse(code, { tokens: true, comment: true, range: true, loc: true, tolerant: true, jsx: true })
-      tokens = ast.tokens
-      comments = ast.comments
-    } else {
-      tokens = []
-      comments = []
-      parser.tokenize(code, { range: true, loc: true, comment: true }, function(token) {
-        if (token.type === 'LineComment') {
-          token.type = 'Line'
-          comments.push(token)
-        } else if (token.type === 'BlockComment') {
-          token.type = 'Block'
-          comments.push(token)
-        } else {
-          // Optimistically upgrade 'static' to a keyword
-          if (token.type === 'Identifier' && token.value === 'static') token.type = 'Keyword'
-          tokens.push(token)
-        }
-      })
-    }
-    normalize(config)
-
-    function tokenIndex(tokens, tkn, start) {
-      var current
-      var rangeStart = tkn.range[0]
-
-      for (current = start; current < tokens.length; current++) {
-        if (tokens[current].range[0] === rangeStart) return current
-      }
-
-      throw new Error('Token %s not found at or after index: %d', tkn, start)
-    }
-
-    function process(surround) {
-      var result
-      var currentIndex
-      var nextIndex
-      var skip = 0
-      var splitEnd
-
-      result = surround(code.slice(start, end), info)
-      if (isObject(result)) {
-        splits.push(result.replacement)
-
-        currentIndex =  info.tokenIndex
-        nextIndex    =  tokenIndex(info.tokens, result.skipPastToken, currentIndex)
-        skip         =  nextIndex - currentIndex
-        splitEnd     =  skip > 0 ? tokens[nextIndex - 1].range[1] : end
-      } else {
-        splits.push(result)
-        splitEnd = end
-      }
-
-      return { skip: skip, splitEnd: splitEnd }
-    }
-
-    function addSplit(start, end, surround, info) {
-      var result
-      var skip = 0
-
-      if (start >= end) return
-      if (surround) {
-        result       =  process(surround)
-        skip         =  result.skip
-        lastSplitEnd =  result.splitEnd
-      } else {
-        splits.push(code.slice(start, end))
-        lastSplitEnd = end
-      }
-
-      return skip
-    }
-
-    all = mergeTokensAndComments(tokens, comments)
-    for (var tokenIdx = 0; tokenIdx < all.length; tokenIdx++) {
-      var token = all[tokenIdx]
-      var surroundForType = config[token.type]
-      var surround
-      var start
-      var end
-
-      // At least the type (e.g., 'Keyword') needs to be specified for the token to be surrounded
-      if (surroundForType) {
-        // root defaults are only taken into account while resolving before/after otherwise
-        // a root default would apply to everything, even if no type default was specified
-        surround = surroundForType
-          && surroundForType.hasOwnProperty(token.value)
-          && surroundForType[token.value]
-          && isFunction(surroundForType[token.value])
-            ? surroundForType[token.value]
-            : surroundForType._default
-
-        start = token.range[0]
-        end = token.range[1]
-
-        addSplit(lastSplitEnd, start)
-        info = { tokenIndex: tokenIdx, tokens: all, ast: ast, code: code }
-        tokenIdx += addSplit(start, end, surround, info)
-      }
-    }
-
-    if (lastSplitEnd < code.length) {
-      addSplit(lastSplitEnd, code.length)
-    }
-
-  if (!opts.nojoin) {
-    transformedCode = splits.join('')
-    if (hashbang.length > 0) {
-      transformedCode = hashbang + transformedCode.substr(hashbang.length)
-    }
-  }
-
-    return {
-        ast      :  ast
-      , tokens   :  tokens
-      , comments :  comments
-      , splits   :  splits
-      , code     :  transformedCode
-    }
-  }
-
-  return exportFn ? exportFn(redeyed) : redeyed
 }
-})()
 
-},{"esprima":14}],16:[function(require,module,exports){
-(function (__dirname){
+module.exports = invariant;
+}).call(this)}).call(this,require('_process'))
+},{"_process":33}],24:[function(require,module,exports){
+'use strict';
+
+/**
+ * Copyright (c) 2013-present, Facebook, Inc.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ * @typechecks
+ */
+
+/**
+ * @param {*} object The object to check.
+ * @return {boolean} Whether or not the object is a DOM node.
+ */
+function isNode(object) {
+  var doc = object ? object.ownerDocument || object : document;
+  var defaultView = doc.defaultView || window;
+  return !!(object && (typeof defaultView.Node === 'function' ? object instanceof defaultView.Node : typeof object === 'object' && typeof object.nodeType === 'number' && typeof object.nodeName === 'string'));
+}
+
+module.exports = isNode;
+},{}],25:[function(require,module,exports){
+'use strict';
+
+/**
+ * Copyright (c) 2013-present, Facebook, Inc.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ * @typechecks
+ */
+
+var isNode = require('./isNode');
+
+/**
+ * @param {*} object The object to check.
+ * @return {boolean} Whether or not the object is a DOM text node.
+ */
+function isTextNode(object) {
+  return isNode(object) && object.nodeType == 3;
+}
+
+module.exports = isTextNode;
+},{"./isNode":24}],26:[function(require,module,exports){
+/**
+ * Copyright (c) 2013-present, Facebook, Inc.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ * @typechecks
+ * 
+ */
+
+/*eslint-disable no-self-compare */
+
+'use strict';
+
+var hasOwnProperty = Object.prototype.hasOwnProperty;
+
+/**
+ * inlined Object.is polyfill to avoid requiring consumers ship their own
+ * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/is
+ */
+function is(x, y) {
+  // SameValue algorithm
+  if (x === y) {
+    // Steps 1-5, 7-10
+    // Steps 6.b-6.e: +0 != -0
+    // Added the nonzero y check to make Flow happy, but it is redundant
+    return x !== 0 || y !== 0 || 1 / x === 1 / y;
+  } else {
+    // Step 6.a: NaN == NaN
+    return x !== x && y !== y;
+  }
+}
+
+/**
+ * Performs equality by iterating through keys on an object and returning false
+ * when any key has values which are not strictly equal between the arguments.
+ * Returns true when the values of all keys are strictly equal.
+ */
+function shallowEqual(objA, objB) {
+  if (is(objA, objB)) {
+    return true;
+  }
+
+  if (typeof objA !== 'object' || objA === null || typeof objB !== 'object' || objB === null) {
+    return false;
+  }
+
+  var keysA = Object.keys(objA);
+  var keysB = Object.keys(objB);
+
+  if (keysA.length !== keysB.length) {
+    return false;
+  }
+
+  // Test for A's keys different from B.
+  for (var i = 0; i < keysA.length; i++) {
+    if (!hasOwnProperty.call(objB, keysA[i]) || !is(objA[keysA[i]], objB[keysA[i]])) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+module.exports = shallowEqual;
+},{}],27:[function(require,module,exports){
+(function (process){(function (){
+/**
+ * Copyright (c) 2014-present, Facebook, Inc.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ */
+
+'use strict';
+
+var emptyFunction = require('./emptyFunction');
+
+/**
+ * Similar to invariant but only logs a warning if the condition is not met.
+ * This can be used to log issues in development environments in critical
+ * paths. Removing the logging code for production environments will keep the
+ * same logic and follow the same code paths.
+ */
+
+var warning = emptyFunction;
+
+if (process.env.NODE_ENV !== 'production') {
+  var printWarning = function printWarning(format) {
+    for (var _len = arguments.length, args = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
+      args[_key - 1] = arguments[_key];
+    }
+
+    var argIndex = 0;
+    var message = 'Warning: ' + format.replace(/%s/g, function () {
+      return args[argIndex++];
+    });
+    if (typeof console !== 'undefined') {
+      console.error(message);
+    }
+    try {
+      // --- Welcome to debugging React ---
+      // This error was thrown as a convenience so that you can use this stack
+      // to find the callsite that caused this warning to fire.
+      throw new Error(message);
+    } catch (x) {}
+  };
+
+  warning = function warning(condition, format) {
+    if (format === undefined) {
+      throw new Error('`warning(condition, format, ...args)` requires a warning ' + 'message argument');
+    }
+
+    if (format.indexOf('Failed Composite propType: ') === 0) {
+      return; // Ignore CompositeComponent proptype check.
+    }
+
+    if (!condition) {
+      for (var _len2 = arguments.length, args = Array(_len2 > 2 ? _len2 - 2 : 0), _key2 = 2; _key2 < _len2; _key2++) {
+        args[_key2 - 2] = arguments[_key2];
+      }
+
+      printWarning.apply(undefined, [format].concat(args));
+    }
+  };
+}
+
+module.exports = warning;
+}).call(this)}).call(this,require('_process'))
+},{"./emptyFunction":18,"_process":33}],28:[function(require,module,exports){
+/*
+object-assign
+(c) Sindre Sorhus
+@license MIT
+*/
+
+'use strict';
+/* eslint-disable no-unused-vars */
+var getOwnPropertySymbols = Object.getOwnPropertySymbols;
+var hasOwnProperty = Object.prototype.hasOwnProperty;
+var propIsEnumerable = Object.prototype.propertyIsEnumerable;
+
+function toObject(val) {
+	if (val === null || val === undefined) {
+		throw new TypeError('Object.assign cannot be called with null or undefined');
+	}
+
+	return Object(val);
+}
+
+function shouldUseNative() {
+	try {
+		if (!Object.assign) {
+			return false;
+		}
+
+		// Detect buggy property enumeration order in older V8 versions.
+
+		// https://bugs.chromium.org/p/v8/issues/detail?id=4118
+		var test1 = new String('abc');  // eslint-disable-line no-new-wrappers
+		test1[5] = 'de';
+		if (Object.getOwnPropertyNames(test1)[0] === '5') {
+			return false;
+		}
+
+		// https://bugs.chromium.org/p/v8/issues/detail?id=3056
+		var test2 = {};
+		for (var i = 0; i < 10; i++) {
+			test2['_' + String.fromCharCode(i)] = i;
+		}
+		var order2 = Object.getOwnPropertyNames(test2).map(function (n) {
+			return test2[n];
+		});
+		if (order2.join('') !== '0123456789') {
+			return false;
+		}
+
+		// https://bugs.chromium.org/p/v8/issues/detail?id=3056
+		var test3 = {};
+		'abcdefghijklmnopqrst'.split('').forEach(function (letter) {
+			test3[letter] = letter;
+		});
+		if (Object.keys(Object.assign({}, test3)).join('') !==
+				'abcdefghijklmnopqrst') {
+			return false;
+		}
+
+		return true;
+	} catch (err) {
+		// We don't expect any of the above to throw, but better to be safe.
+		return false;
+	}
+}
+
+module.exports = shouldUseNative() ? Object.assign : function (target, source) {
+	var from;
+	var to = toObject(target);
+	var symbols;
+
+	for (var s = 1; s < arguments.length; s++) {
+		from = Object(arguments[s]);
+
+		for (var key in from) {
+			if (hasOwnProperty.call(from, key)) {
+				to[key] = from[key];
+			}
+		}
+
+		if (getOwnPropertySymbols) {
+			symbols = getOwnPropertySymbols(from);
+			for (var i = 0; i < symbols.length; i++) {
+				if (propIsEnumerable.call(from, symbols[i])) {
+					to[symbols[i]] = from[symbols[i]];
+				}
+			}
+		}
+	}
+
+	return to;
+};
+
+},{}],29:[function(require,module,exports){
+(function (process){(function (){
+// .dirname, .basename, and .extname methods are extracted from Node.js v8.11.1,
+// backported and transplited with Babel, with backwards-compat fixes
+
+// Copyright Joyent, Inc. and other Node contributors.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to permit
+// persons to whom the Software is furnished to do so, subject to the
+// following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+// USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+// resolves . and .. elements in a path array with directory names there
+// must be no slashes, empty elements, or device names (c:\) in the array
+// (so also no leading and trailing slashes - it does not distinguish
+// relative and absolute paths)
+function normalizeArray(parts, allowAboveRoot) {
+  // if the path tries to go above the root, `up` ends up > 0
+  var up = 0;
+  for (var i = parts.length - 1; i >= 0; i--) {
+    var last = parts[i];
+    if (last === '.') {
+      parts.splice(i, 1);
+    } else if (last === '..') {
+      parts.splice(i, 1);
+      up++;
+    } else if (up) {
+      parts.splice(i, 1);
+      up--;
+    }
+  }
+
+  // if the path is allowed to go above the root, restore leading ..s
+  if (allowAboveRoot) {
+    for (; up--; up) {
+      parts.unshift('..');
+    }
+  }
+
+  return parts;
+}
+
+// path.resolve([from ...], to)
+// posix version
+exports.resolve = function() {
+  var resolvedPath = '',
+      resolvedAbsolute = false;
+
+  for (var i = arguments.length - 1; i >= -1 && !resolvedAbsolute; i--) {
+    var path = (i >= 0) ? arguments[i] : process.cwd();
+
+    // Skip empty and invalid entries
+    if (typeof path !== 'string') {
+      throw new TypeError('Arguments to path.resolve must be strings');
+    } else if (!path) {
+      continue;
+    }
+
+    resolvedPath = path + '/' + resolvedPath;
+    resolvedAbsolute = path.charAt(0) === '/';
+  }
+
+  // At this point the path should be resolved to a full absolute path, but
+  // handle relative paths to be safe (might happen when process.cwd() fails)
+
+  // Normalize the path
+  resolvedPath = normalizeArray(filter(resolvedPath.split('/'), function(p) {
+    return !!p;
+  }), !resolvedAbsolute).join('/');
+
+  return ((resolvedAbsolute ? '/' : '') + resolvedPath) || '.';
+};
+
+// path.normalize(path)
+// posix version
+exports.normalize = function(path) {
+  var isAbsolute = exports.isAbsolute(path),
+      trailingSlash = substr(path, -1) === '/';
+
+  // Normalize the path
+  path = normalizeArray(filter(path.split('/'), function(p) {
+    return !!p;
+  }), !isAbsolute).join('/');
+
+  if (!path && !isAbsolute) {
+    path = '.';
+  }
+  if (path && trailingSlash) {
+    path += '/';
+  }
+
+  return (isAbsolute ? '/' : '') + path;
+};
+
+// posix version
+exports.isAbsolute = function(path) {
+  return path.charAt(0) === '/';
+};
+
+// posix version
+exports.join = function() {
+  var paths = Array.prototype.slice.call(arguments, 0);
+  return exports.normalize(filter(paths, function(p, index) {
+    if (typeof p !== 'string') {
+      throw new TypeError('Arguments to path.join must be strings');
+    }
+    return p;
+  }).join('/'));
+};
+
+
+// path.relative(from, to)
+// posix version
+exports.relative = function(from, to) {
+  from = exports.resolve(from).substr(1);
+  to = exports.resolve(to).substr(1);
+
+  function trim(arr) {
+    var start = 0;
+    for (; start < arr.length; start++) {
+      if (arr[start] !== '') break;
+    }
+
+    var end = arr.length - 1;
+    for (; end >= 0; end--) {
+      if (arr[end] !== '') break;
+    }
+
+    if (start > end) return [];
+    return arr.slice(start, end - start + 1);
+  }
+
+  var fromParts = trim(from.split('/'));
+  var toParts = trim(to.split('/'));
+
+  var length = Math.min(fromParts.length, toParts.length);
+  var samePartsLength = length;
+  for (var i = 0; i < length; i++) {
+    if (fromParts[i] !== toParts[i]) {
+      samePartsLength = i;
+      break;
+    }
+  }
+
+  var outputParts = [];
+  for (var i = samePartsLength; i < fromParts.length; i++) {
+    outputParts.push('..');
+  }
+
+  outputParts = outputParts.concat(toParts.slice(samePartsLength));
+
+  return outputParts.join('/');
+};
+
+exports.sep = '/';
+exports.delimiter = ':';
+
+exports.dirname = function (path) {
+  if (typeof path !== 'string') path = path + '';
+  if (path.length === 0) return '.';
+  var code = path.charCodeAt(0);
+  var hasRoot = code === 47 /*/*/;
+  var end = -1;
+  var matchedSlash = true;
+  for (var i = path.length - 1; i >= 1; --i) {
+    code = path.charCodeAt(i);
+    if (code === 47 /*/*/) {
+        if (!matchedSlash) {
+          end = i;
+          break;
+        }
+      } else {
+      // We saw the first non-path separator
+      matchedSlash = false;
+    }
+  }
+
+  if (end === -1) return hasRoot ? '/' : '.';
+  if (hasRoot && end === 1) {
+    // return '//';
+    // Backwards-compat fix:
+    return '/';
+  }
+  return path.slice(0, end);
+};
+
+function basename(path) {
+  if (typeof path !== 'string') path = path + '';
+
+  var start = 0;
+  var end = -1;
+  var matchedSlash = true;
+  var i;
+
+  for (i = path.length - 1; i >= 0; --i) {
+    if (path.charCodeAt(i) === 47 /*/*/) {
+        // If we reached a path separator that was not part of a set of path
+        // separators at the end of the string, stop now
+        if (!matchedSlash) {
+          start = i + 1;
+          break;
+        }
+      } else if (end === -1) {
+      // We saw the first non-path separator, mark this as the end of our
+      // path component
+      matchedSlash = false;
+      end = i + 1;
+    }
+  }
+
+  if (end === -1) return '';
+  return path.slice(start, end);
+}
+
+// Uses a mixed approach for backwards-compatibility, as ext behavior changed
+// in new Node.js versions, so only basename() above is backported here
+exports.basename = function (path, ext) {
+  var f = basename(path);
+  if (ext && f.substr(-1 * ext.length) === ext) {
+    f = f.substr(0, f.length - ext.length);
+  }
+  return f;
+};
+
+exports.extname = function (path) {
+  if (typeof path !== 'string') path = path + '';
+  var startDot = -1;
+  var startPart = 0;
+  var end = -1;
+  var matchedSlash = true;
+  // Track the state of characters (if any) we see before our first dot and
+  // after any path separator we find
+  var preDotState = 0;
+  for (var i = path.length - 1; i >= 0; --i) {
+    var code = path.charCodeAt(i);
+    if (code === 47 /*/*/) {
+        // If we reached a path separator that was not part of a set of path
+        // separators at the end of the string, stop now
+        if (!matchedSlash) {
+          startPart = i + 1;
+          break;
+        }
+        continue;
+      }
+    if (end === -1) {
+      // We saw the first non-path separator, mark this as the end of our
+      // extension
+      matchedSlash = false;
+      end = i + 1;
+    }
+    if (code === 46 /*.*/) {
+        // If this is our first dot, mark it as the start of our extension
+        if (startDot === -1)
+          startDot = i;
+        else if (preDotState !== 1)
+          preDotState = 1;
+    } else if (startDot !== -1) {
+      // We saw a non-dot and non-path separator before our dot, so we should
+      // have a good chance at having a non-empty extension
+      preDotState = -1;
+    }
+  }
+
+  if (startDot === -1 || end === -1 ||
+      // We saw a non-dot character immediately before the dot
+      preDotState === 0 ||
+      // The (right-most) trimmed path component is exactly '..'
+      preDotState === 1 && startDot === end - 1 && startDot === startPart + 1) {
+    return '';
+  }
+  return path.slice(startDot, end);
+};
+
+function filter (xs, f) {
+    if (xs.filter) return xs.filter(f);
+    var res = [];
+    for (var i = 0; i < xs.length; i++) {
+        if (f(xs[i], i, xs)) res.push(xs[i]);
+    }
+    return res;
+}
+
+// String.prototype.substr - negative index don't work in IE8
+var substr = 'ab'.substr(-1) === 'b'
+    ? function (str, start, len) { return str.substr(start, len) }
+    : function (str, start, len) {
+        if (start < 0) start = str.length + start;
+        return str.substr(start, len);
+    }
+;
+
+}).call(this)}).call(this,require('_process'))
+},{"_process":33}],30:[function(require,module,exports){
+(function (__dirname){(function (){
 'use strict'
 
 /**
@@ -9852,8 +9998,8 @@ module.exports = {
   , classes      : classes
 }
 
-}).call(this,"/node_modules/peacock")
-},{"./spans":17,"./themes/default":18,"path":12,"redeyed":15}],17:[function(require,module,exports){
+}).call(this)}).call(this,"/node_modules/peacock")
+},{"./spans":31,"./themes/default":32,"path":29,"redeyed":47}],31:[function(require,module,exports){
 'use strict'
 
 var classes = {
@@ -9938,7 +10084,7 @@ Object.keys(classes)
 module.exports = spans
 module.exports.classes = classes
 
-},{}],18:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 var spans = require('../spans')
 
 module.exports = {
@@ -10129,7 +10275,313 @@ module.exports = {
   , _default: undefined
 }
 
-},{"../spans":17}],19:[function(require,module,exports){
+},{"../spans":31}],33:[function(require,module,exports){
+// shim for using process in browser
+var process = module.exports = {};
+
+// cached from whatever global is present so that test runners that stub it
+// don't break things.  But we need to wrap it in a try catch in case it is
+// wrapped in strict mode code which doesn't define any globals.  It's inside a
+// function because try/catches deoptimize in certain engines.
+
+var cachedSetTimeout;
+var cachedClearTimeout;
+
+function defaultSetTimout() {
+    throw new Error('setTimeout has not been defined');
+}
+function defaultClearTimeout () {
+    throw new Error('clearTimeout has not been defined');
+}
+(function () {
+    try {
+        if (typeof setTimeout === 'function') {
+            cachedSetTimeout = setTimeout;
+        } else {
+            cachedSetTimeout = defaultSetTimout;
+        }
+    } catch (e) {
+        cachedSetTimeout = defaultSetTimout;
+    }
+    try {
+        if (typeof clearTimeout === 'function') {
+            cachedClearTimeout = clearTimeout;
+        } else {
+            cachedClearTimeout = defaultClearTimeout;
+        }
+    } catch (e) {
+        cachedClearTimeout = defaultClearTimeout;
+    }
+} ())
+function runTimeout(fun) {
+    if (cachedSetTimeout === setTimeout) {
+        //normal enviroments in sane situations
+        return setTimeout(fun, 0);
+    }
+    // if setTimeout wasn't available but was latter defined
+    if ((cachedSetTimeout === defaultSetTimout || !cachedSetTimeout) && setTimeout) {
+        cachedSetTimeout = setTimeout;
+        return setTimeout(fun, 0);
+    }
+    try {
+        // when when somebody has screwed with setTimeout but no I.E. maddness
+        return cachedSetTimeout(fun, 0);
+    } catch(e){
+        try {
+            // When we are in I.E. but the script has been evaled so I.E. doesn't trust the global object when called normally
+            return cachedSetTimeout.call(null, fun, 0);
+        } catch(e){
+            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error
+            return cachedSetTimeout.call(this, fun, 0);
+        }
+    }
+
+
+}
+function runClearTimeout(marker) {
+    if (cachedClearTimeout === clearTimeout) {
+        //normal enviroments in sane situations
+        return clearTimeout(marker);
+    }
+    // if clearTimeout wasn't available but was latter defined
+    if ((cachedClearTimeout === defaultClearTimeout || !cachedClearTimeout) && clearTimeout) {
+        cachedClearTimeout = clearTimeout;
+        return clearTimeout(marker);
+    }
+    try {
+        // when when somebody has screwed with setTimeout but no I.E. maddness
+        return cachedClearTimeout(marker);
+    } catch (e){
+        try {
+            // When we are in I.E. but the script has been evaled so I.E. doesn't  trust the global object when called normally
+            return cachedClearTimeout.call(null, marker);
+        } catch (e){
+            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error.
+            // Some versions of I.E. have different rules for clearTimeout vs setTimeout
+            return cachedClearTimeout.call(this, marker);
+        }
+    }
+
+
+
+}
+var queue = [];
+var draining = false;
+var currentQueue;
+var queueIndex = -1;
+
+function cleanUpNextTick() {
+    if (!draining || !currentQueue) {
+        return;
+    }
+    draining = false;
+    if (currentQueue.length) {
+        queue = currentQueue.concat(queue);
+    } else {
+        queueIndex = -1;
+    }
+    if (queue.length) {
+        drainQueue();
+    }
+}
+
+function drainQueue() {
+    if (draining) {
+        return;
+    }
+    var timeout = runTimeout(cleanUpNextTick);
+    draining = true;
+
+    var len = queue.length;
+    while(len) {
+        currentQueue = queue;
+        queue = [];
+        while (++queueIndex < len) {
+            if (currentQueue) {
+                currentQueue[queueIndex].run();
+            }
+        }
+        queueIndex = -1;
+        len = queue.length;
+    }
+    currentQueue = null;
+    draining = false;
+    runClearTimeout(timeout);
+}
+
+process.nextTick = function (fun) {
+    var args = new Array(arguments.length - 1);
+    if (arguments.length > 1) {
+        for (var i = 1; i < arguments.length; i++) {
+            args[i - 1] = arguments[i];
+        }
+    }
+    queue.push(new Item(fun, args));
+    if (queue.length === 1 && !draining) {
+        runTimeout(drainQueue);
+    }
+};
+
+// v8 likes predictible objects
+function Item(fun, array) {
+    this.fun = fun;
+    this.array = array;
+}
+Item.prototype.run = function () {
+    this.fun.apply(null, this.array);
+};
+process.title = 'browser';
+process.browser = true;
+process.env = {};
+process.argv = [];
+process.version = ''; // empty string to avoid regexp issues
+process.versions = {};
+
+function noop() {}
+
+process.on = noop;
+process.addListener = noop;
+process.once = noop;
+process.off = noop;
+process.removeListener = noop;
+process.removeAllListeners = noop;
+process.emit = noop;
+process.prependListener = noop;
+process.prependOnceListener = noop;
+
+process.listeners = function (name) { return [] }
+
+process.binding = function (name) {
+    throw new Error('process.binding is not supported');
+};
+
+process.cwd = function () { return '/' };
+process.chdir = function (dir) {
+    throw new Error('process.chdir is not supported');
+};
+process.umask = function() { return 0; };
+
+},{}],34:[function(require,module,exports){
+(function (process){(function (){
+/**
+ * Copyright (c) 2013-present, Facebook, Inc.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+'use strict';
+
+var printWarning = function() {};
+
+if (process.env.NODE_ENV !== 'production') {
+  var ReactPropTypesSecret = require('./lib/ReactPropTypesSecret');
+  var loggedTypeFailures = {};
+  var has = Function.call.bind(Object.prototype.hasOwnProperty);
+
+  printWarning = function(text) {
+    var message = 'Warning: ' + text;
+    if (typeof console !== 'undefined') {
+      console.error(message);
+    }
+    try {
+      // --- Welcome to debugging React ---
+      // This error was thrown as a convenience so that you can use this stack
+      // to find the callsite that caused this warning to fire.
+      throw new Error(message);
+    } catch (x) {}
+  };
+}
+
+/**
+ * Assert that the values match with the type specs.
+ * Error messages are memorized and will only be shown once.
+ *
+ * @param {object} typeSpecs Map of name to a ReactPropType
+ * @param {object} values Runtime values that need to be type-checked
+ * @param {string} location e.g. "prop", "context", "child context"
+ * @param {string} componentName Name of the component for error messages.
+ * @param {?Function} getStack Returns the component stack.
+ * @private
+ */
+function checkPropTypes(typeSpecs, values, location, componentName, getStack) {
+  if (process.env.NODE_ENV !== 'production') {
+    for (var typeSpecName in typeSpecs) {
+      if (has(typeSpecs, typeSpecName)) {
+        var error;
+        // Prop type validation may throw. In case they do, we don't want to
+        // fail the render phase where it didn't fail before. So we log it.
+        // After these have been cleaned up, we'll let them throw.
+        try {
+          // This is intentionally an invariant that gets caught. It's the same
+          // behavior as without this statement except with a better message.
+          if (typeof typeSpecs[typeSpecName] !== 'function') {
+            var err = Error(
+              (componentName || 'React class') + ': ' + location + ' type `' + typeSpecName + '` is invalid; ' +
+              'it must be a function, usually from the `prop-types` package, but received `' + typeof typeSpecs[typeSpecName] + '`.'
+            );
+            err.name = 'Invariant Violation';
+            throw err;
+          }
+          error = typeSpecs[typeSpecName](values, typeSpecName, componentName, location, null, ReactPropTypesSecret);
+        } catch (ex) {
+          error = ex;
+        }
+        if (error && !(error instanceof Error)) {
+          printWarning(
+            (componentName || 'React class') + ': type specification of ' +
+            location + ' `' + typeSpecName + '` is invalid; the type checker ' +
+            'function must return `null` or an `Error` but returned a ' + typeof error + '. ' +
+            'You may have forgotten to pass an argument to the type checker ' +
+            'creator (arrayOf, instanceOf, objectOf, oneOf, oneOfType, and ' +
+            'shape all require an argument).'
+          );
+        }
+        if (error instanceof Error && !(error.message in loggedTypeFailures)) {
+          // Only monitor this failure once because there tends to be a lot of the
+          // same error.
+          loggedTypeFailures[error.message] = true;
+
+          var stack = getStack ? getStack() : '';
+
+          printWarning(
+            'Failed ' + location + ' type: ' + error.message + (stack != null ? stack : '')
+          );
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Resets warning cache when testing.
+ *
+ * @private
+ */
+checkPropTypes.resetWarningCache = function() {
+  if (process.env.NODE_ENV !== 'production') {
+    loggedTypeFailures = {};
+  }
+}
+
+module.exports = checkPropTypes;
+
+}).call(this)}).call(this,require('_process'))
+},{"./lib/ReactPropTypesSecret":35,"_process":33}],35:[function(require,module,exports){
+/**
+ * Copyright (c) 2013-present, Facebook, Inc.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+'use strict';
+
+var ReactPropTypesSecret = 'SECRET_DO_NOT_PASS_THIS_OR_YOU_WILL_BE_FIRED';
+
+module.exports = ReactPropTypesSecret;
+
+},{}],36:[function(require,module,exports){
 'use strict';
 
 var replace = String.prototype.replace;
@@ -10149,7 +10601,7 @@ module.exports = {
     RFC3986: 'RFC3986'
 };
 
-},{}],20:[function(require,module,exports){
+},{}],37:[function(require,module,exports){
 'use strict';
 
 var stringify = require('./stringify');
@@ -10162,7 +10614,7 @@ module.exports = {
     stringify: stringify
 };
 
-},{"./formats":19,"./parse":21,"./stringify":22}],21:[function(require,module,exports){
+},{"./formats":36,"./parse":38,"./stringify":39}],38:[function(require,module,exports){
 'use strict';
 
 var utils = require('./utils');
@@ -10338,7 +10790,7 @@ module.exports = function (str, opts) {
     return utils.compact(obj);
 };
 
-},{"./utils":23}],22:[function(require,module,exports){
+},{"./utils":40}],39:[function(require,module,exports){
 'use strict';
 
 var utils = require('./utils');
@@ -10550,7 +11002,7 @@ module.exports = function (object, opts) {
     return joined.length > 0 ? prefix + joined : '';
 };
 
-},{"./formats":19,"./utils":23}],23:[function(require,module,exports){
+},{"./formats":36,"./utils":40}],40:[function(require,module,exports){
 'use strict';
 
 var has = Object.prototype.hasOwnProperty;
@@ -10765,8 +11217,8 @@ module.exports = {
     merge: merge
 };
 
-},{}],24:[function(require,module,exports){
-(function (process){
+},{}],41:[function(require,module,exports){
+(function (process){(function (){
 /** @license React v16.3.3
  * react-dom.development.js
  *
@@ -27422,8 +27874,8 @@ module.exports = reactDom;
   })();
 }
 
-}).call(this,require('_process'))
-},{"_process":13,"fbjs/lib/ExecutionEnvironment":27,"fbjs/lib/camelizeStyleName":29,"fbjs/lib/containsNode":30,"fbjs/lib/emptyFunction":31,"fbjs/lib/emptyObject":32,"fbjs/lib/getActiveElement":33,"fbjs/lib/hyphenateStyleName":35,"fbjs/lib/invariant":36,"fbjs/lib/shallowEqual":39,"fbjs/lib/warning":40,"object-assign":41,"prop-types/checkPropTypes":42,"react":46}],25:[function(require,module,exports){
+}).call(this)}).call(this,require('_process'))
+},{"_process":33,"fbjs/lib/ExecutionEnvironment":14,"fbjs/lib/camelizeStyleName":16,"fbjs/lib/containsNode":17,"fbjs/lib/emptyFunction":18,"fbjs/lib/emptyObject":19,"fbjs/lib/getActiveElement":20,"fbjs/lib/hyphenateStyleName":22,"fbjs/lib/invariant":23,"fbjs/lib/shallowEqual":26,"fbjs/lib/warning":27,"object-assign":28,"prop-types/checkPropTypes":34,"react":46}],42:[function(require,module,exports){
 /** @license React v16.3.3
  * react-dom.production.min.js
  *
@@ -27671,8 +28123,8 @@ var Gg={createPortal:Fg,findDOMNode:function(a){return null==a?null:1===a.nodeTy
 null})}),!0):!1},unstable_createPortal:function(){return Fg.apply(void 0,arguments)},unstable_batchedUpdates:X.batchedUpdates,unstable_deferredUpdates:X.deferredUpdates,flushSync:X.flushSync,unstable_flushControlled:X.flushControlled,__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED:{EventPluginHub:Ra,EventPluginRegistry:Ca,EventPropagators:kb,ReactControlledComponent:$b,ReactDOMComponentTree:bb,ReactDOMEventListener:$d},unstable_createRoot:function(a,b){return new tg(a,!0,null!=b&&!0===b.hydrate)}};
 X.injectIntoDevTools({findFiberByHostInstance:Ua,bundleType:0,version:"16.3.3",rendererPackageName:"react-dom"});var Hg=Object.freeze({default:Gg}),Ig=Hg&&Gg||Hg;module.exports=Ig["default"]?Ig["default"]:Ig;
 
-},{"fbjs/lib/ExecutionEnvironment":27,"fbjs/lib/containsNode":30,"fbjs/lib/emptyFunction":31,"fbjs/lib/emptyObject":32,"fbjs/lib/getActiveElement":33,"fbjs/lib/invariant":36,"fbjs/lib/shallowEqual":39,"object-assign":41,"react":46}],26:[function(require,module,exports){
-(function (process){
+},{"fbjs/lib/ExecutionEnvironment":14,"fbjs/lib/containsNode":17,"fbjs/lib/emptyFunction":18,"fbjs/lib/emptyObject":19,"fbjs/lib/getActiveElement":20,"fbjs/lib/invariant":23,"fbjs/lib/shallowEqual":26,"object-assign":28,"react":46}],43:[function(require,module,exports){
+(function (process){(function (){
 'use strict';
 
 function checkDCE() {
@@ -27712,745 +28164,9 @@ if (process.env.NODE_ENV === 'production') {
   module.exports = require('./cjs/react-dom.development.js');
 }
 
-}).call(this,require('_process'))
-},{"./cjs/react-dom.development.js":24,"./cjs/react-dom.production.min.js":25,"_process":13}],27:[function(require,module,exports){
-/**
- * Copyright (c) 2013-present, Facebook, Inc.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- *
- */
-
-'use strict';
-
-var canUseDOM = !!(typeof window !== 'undefined' && window.document && window.document.createElement);
-
-/**
- * Simple, lightweight module assisting with the detection and context of
- * Worker. Helps avoid circular dependencies and allows code to reason about
- * whether or not they are in a Worker, even if they never include the main
- * `ReactWorker` dependency.
- */
-var ExecutionEnvironment = {
-
-  canUseDOM: canUseDOM,
-
-  canUseWorkers: typeof Worker !== 'undefined',
-
-  canUseEventListeners: canUseDOM && !!(window.addEventListener || window.attachEvent),
-
-  canUseViewport: canUseDOM && !!window.screen,
-
-  isInWorker: !canUseDOM // For now, this is true - might change in the future.
-
-};
-
-module.exports = ExecutionEnvironment;
-},{}],28:[function(require,module,exports){
-"use strict";
-
-/**
- * Copyright (c) 2013-present, Facebook, Inc.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- *
- * @typechecks
- */
-
-var _hyphenPattern = /-(.)/g;
-
-/**
- * Camelcases a hyphenated string, for example:
- *
- *   > camelize('background-color')
- *   < "backgroundColor"
- *
- * @param {string} string
- * @return {string}
- */
-function camelize(string) {
-  return string.replace(_hyphenPattern, function (_, character) {
-    return character.toUpperCase();
-  });
-}
-
-module.exports = camelize;
-},{}],29:[function(require,module,exports){
-/**
- * Copyright (c) 2013-present, Facebook, Inc.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- *
- * @typechecks
- */
-
-'use strict';
-
-var camelize = require('./camelize');
-
-var msPattern = /^-ms-/;
-
-/**
- * Camelcases a hyphenated CSS property name, for example:
- *
- *   > camelizeStyleName('background-color')
- *   < "backgroundColor"
- *   > camelizeStyleName('-moz-transition')
- *   < "MozTransition"
- *   > camelizeStyleName('-ms-transition')
- *   < "msTransition"
- *
- * As Andi Smith suggests
- * (http://www.andismith.com/blog/2012/02/modernizr-prefixed/), an `-ms` prefix
- * is converted to lowercase `ms`.
- *
- * @param {string} string
- * @return {string}
- */
-function camelizeStyleName(string) {
-  return camelize(string.replace(msPattern, 'ms-'));
-}
-
-module.exports = camelizeStyleName;
-},{"./camelize":28}],30:[function(require,module,exports){
-'use strict';
-
-/**
- * Copyright (c) 2013-present, Facebook, Inc.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- *
- * 
- */
-
-var isTextNode = require('./isTextNode');
-
-/*eslint-disable no-bitwise */
-
-/**
- * Checks if a given DOM node contains or is another DOM node.
- */
-function containsNode(outerNode, innerNode) {
-  if (!outerNode || !innerNode) {
-    return false;
-  } else if (outerNode === innerNode) {
-    return true;
-  } else if (isTextNode(outerNode)) {
-    return false;
-  } else if (isTextNode(innerNode)) {
-    return containsNode(outerNode, innerNode.parentNode);
-  } else if ('contains' in outerNode) {
-    return outerNode.contains(innerNode);
-  } else if (outerNode.compareDocumentPosition) {
-    return !!(outerNode.compareDocumentPosition(innerNode) & 16);
-  } else {
-    return false;
-  }
-}
-
-module.exports = containsNode;
-},{"./isTextNode":38}],31:[function(require,module,exports){
-"use strict";
-
-/**
- * Copyright (c) 2013-present, Facebook, Inc.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- *
- * 
- */
-
-function makeEmptyFunction(arg) {
-  return function () {
-    return arg;
-  };
-}
-
-/**
- * This function accepts and discards inputs; it has no side effects. This is
- * primarily useful idiomatically for overridable function endpoints which
- * always need to be callable, since JS lacks a null-call idiom ala Cocoa.
- */
-var emptyFunction = function emptyFunction() {};
-
-emptyFunction.thatReturns = makeEmptyFunction;
-emptyFunction.thatReturnsFalse = makeEmptyFunction(false);
-emptyFunction.thatReturnsTrue = makeEmptyFunction(true);
-emptyFunction.thatReturnsNull = makeEmptyFunction(null);
-emptyFunction.thatReturnsThis = function () {
-  return this;
-};
-emptyFunction.thatReturnsArgument = function (arg) {
-  return arg;
-};
-
-module.exports = emptyFunction;
-},{}],32:[function(require,module,exports){
-(function (process){
-/**
- * Copyright (c) 2013-present, Facebook, Inc.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- *
- */
-
-'use strict';
-
-var emptyObject = {};
-
-if (process.env.NODE_ENV !== 'production') {
-  Object.freeze(emptyObject);
-}
-
-module.exports = emptyObject;
-}).call(this,require('_process'))
-},{"_process":13}],33:[function(require,module,exports){
-'use strict';
-
-/**
- * Copyright (c) 2013-present, Facebook, Inc.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- *
- * @typechecks
- */
-
-/* eslint-disable fb-www/typeof-undefined */
-
-/**
- * Same as document.activeElement but wraps in a try-catch block. In IE it is
- * not safe to call document.activeElement if there is nothing focused.
- *
- * The activeElement will be null only if the document or document body is not
- * yet defined.
- *
- * @param {?DOMDocument} doc Defaults to current document.
- * @return {?DOMElement}
- */
-function getActiveElement(doc) /*?DOMElement*/{
-  doc = doc || (typeof document !== 'undefined' ? document : undefined);
-  if (typeof doc === 'undefined') {
-    return null;
-  }
-  try {
-    return doc.activeElement || doc.body;
-  } catch (e) {
-    return doc.body;
-  }
-}
-
-module.exports = getActiveElement;
-},{}],34:[function(require,module,exports){
-'use strict';
-
-/**
- * Copyright (c) 2013-present, Facebook, Inc.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- *
- * @typechecks
- */
-
-var _uppercasePattern = /([A-Z])/g;
-
-/**
- * Hyphenates a camelcased string, for example:
- *
- *   > hyphenate('backgroundColor')
- *   < "background-color"
- *
- * For CSS style names, use `hyphenateStyleName` instead which works properly
- * with all vendor prefixes, including `ms`.
- *
- * @param {string} string
- * @return {string}
- */
-function hyphenate(string) {
-  return string.replace(_uppercasePattern, '-$1').toLowerCase();
-}
-
-module.exports = hyphenate;
-},{}],35:[function(require,module,exports){
-/**
- * Copyright (c) 2013-present, Facebook, Inc.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- *
- * @typechecks
- */
-
-'use strict';
-
-var hyphenate = require('./hyphenate');
-
-var msPattern = /^ms-/;
-
-/**
- * Hyphenates a camelcased CSS property name, for example:
- *
- *   > hyphenateStyleName('backgroundColor')
- *   < "background-color"
- *   > hyphenateStyleName('MozTransition')
- *   < "-moz-transition"
- *   > hyphenateStyleName('msTransition')
- *   < "-ms-transition"
- *
- * As Modernizr suggests (http://modernizr.com/docs/#prefixed), an `ms` prefix
- * is converted to `-ms-`.
- *
- * @param {string} string
- * @return {string}
- */
-function hyphenateStyleName(string) {
-  return hyphenate(string).replace(msPattern, '-ms-');
-}
-
-module.exports = hyphenateStyleName;
-},{"./hyphenate":34}],36:[function(require,module,exports){
-(function (process){
-/**
- * Copyright (c) 2013-present, Facebook, Inc.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- *
- */
-
-'use strict';
-
-/**
- * Use invariant() to assert state which your program assumes to be true.
- *
- * Provide sprintf-style format (only %s is supported) and arguments
- * to provide information about what broke and what you were
- * expecting.
- *
- * The invariant message will be stripped in production, but the invariant
- * will remain to ensure logic does not differ in production.
- */
-
-var validateFormat = function validateFormat(format) {};
-
-if (process.env.NODE_ENV !== 'production') {
-  validateFormat = function validateFormat(format) {
-    if (format === undefined) {
-      throw new Error('invariant requires an error message argument');
-    }
-  };
-}
-
-function invariant(condition, format, a, b, c, d, e, f) {
-  validateFormat(format);
-
-  if (!condition) {
-    var error;
-    if (format === undefined) {
-      error = new Error('Minified exception occurred; use the non-minified dev environment ' + 'for the full error message and additional helpful warnings.');
-    } else {
-      var args = [a, b, c, d, e, f];
-      var argIndex = 0;
-      error = new Error(format.replace(/%s/g, function () {
-        return args[argIndex++];
-      }));
-      error.name = 'Invariant Violation';
-    }
-
-    error.framesToPop = 1; // we don't care about invariant's own frame
-    throw error;
-  }
-}
-
-module.exports = invariant;
-}).call(this,require('_process'))
-},{"_process":13}],37:[function(require,module,exports){
-'use strict';
-
-/**
- * Copyright (c) 2013-present, Facebook, Inc.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- *
- * @typechecks
- */
-
-/**
- * @param {*} object The object to check.
- * @return {boolean} Whether or not the object is a DOM node.
- */
-function isNode(object) {
-  var doc = object ? object.ownerDocument || object : document;
-  var defaultView = doc.defaultView || window;
-  return !!(object && (typeof defaultView.Node === 'function' ? object instanceof defaultView.Node : typeof object === 'object' && typeof object.nodeType === 'number' && typeof object.nodeName === 'string'));
-}
-
-module.exports = isNode;
-},{}],38:[function(require,module,exports){
-'use strict';
-
-/**
- * Copyright (c) 2013-present, Facebook, Inc.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- *
- * @typechecks
- */
-
-var isNode = require('./isNode');
-
-/**
- * @param {*} object The object to check.
- * @return {boolean} Whether or not the object is a DOM text node.
- */
-function isTextNode(object) {
-  return isNode(object) && object.nodeType == 3;
-}
-
-module.exports = isTextNode;
-},{"./isNode":37}],39:[function(require,module,exports){
-/**
- * Copyright (c) 2013-present, Facebook, Inc.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- *
- * @typechecks
- * 
- */
-
-/*eslint-disable no-self-compare */
-
-'use strict';
-
-var hasOwnProperty = Object.prototype.hasOwnProperty;
-
-/**
- * inlined Object.is polyfill to avoid requiring consumers ship their own
- * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/is
- */
-function is(x, y) {
-  // SameValue algorithm
-  if (x === y) {
-    // Steps 1-5, 7-10
-    // Steps 6.b-6.e: +0 != -0
-    // Added the nonzero y check to make Flow happy, but it is redundant
-    return x !== 0 || y !== 0 || 1 / x === 1 / y;
-  } else {
-    // Step 6.a: NaN == NaN
-    return x !== x && y !== y;
-  }
-}
-
-/**
- * Performs equality by iterating through keys on an object and returning false
- * when any key has values which are not strictly equal between the arguments.
- * Returns true when the values of all keys are strictly equal.
- */
-function shallowEqual(objA, objB) {
-  if (is(objA, objB)) {
-    return true;
-  }
-
-  if (typeof objA !== 'object' || objA === null || typeof objB !== 'object' || objB === null) {
-    return false;
-  }
-
-  var keysA = Object.keys(objA);
-  var keysB = Object.keys(objB);
-
-  if (keysA.length !== keysB.length) {
-    return false;
-  }
-
-  // Test for A's keys different from B.
-  for (var i = 0; i < keysA.length; i++) {
-    if (!hasOwnProperty.call(objB, keysA[i]) || !is(objA[keysA[i]], objB[keysA[i]])) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-module.exports = shallowEqual;
-},{}],40:[function(require,module,exports){
-(function (process){
-/**
- * Copyright (c) 2014-present, Facebook, Inc.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- *
- */
-
-'use strict';
-
-var emptyFunction = require('./emptyFunction');
-
-/**
- * Similar to invariant but only logs a warning if the condition is not met.
- * This can be used to log issues in development environments in critical
- * paths. Removing the logging code for production environments will keep the
- * same logic and follow the same code paths.
- */
-
-var warning = emptyFunction;
-
-if (process.env.NODE_ENV !== 'production') {
-  var printWarning = function printWarning(format) {
-    for (var _len = arguments.length, args = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
-      args[_key - 1] = arguments[_key];
-    }
-
-    var argIndex = 0;
-    var message = 'Warning: ' + format.replace(/%s/g, function () {
-      return args[argIndex++];
-    });
-    if (typeof console !== 'undefined') {
-      console.error(message);
-    }
-    try {
-      // --- Welcome to debugging React ---
-      // This error was thrown as a convenience so that you can use this stack
-      // to find the callsite that caused this warning to fire.
-      throw new Error(message);
-    } catch (x) {}
-  };
-
-  warning = function warning(condition, format) {
-    if (format === undefined) {
-      throw new Error('`warning(condition, format, ...args)` requires a warning ' + 'message argument');
-    }
-
-    if (format.indexOf('Failed Composite propType: ') === 0) {
-      return; // Ignore CompositeComponent proptype check.
-    }
-
-    if (!condition) {
-      for (var _len2 = arguments.length, args = Array(_len2 > 2 ? _len2 - 2 : 0), _key2 = 2; _key2 < _len2; _key2++) {
-        args[_key2 - 2] = arguments[_key2];
-      }
-
-      printWarning.apply(undefined, [format].concat(args));
-    }
-  };
-}
-
-module.exports = warning;
-}).call(this,require('_process'))
-},{"./emptyFunction":31,"_process":13}],41:[function(require,module,exports){
-/*
-object-assign
-(c) Sindre Sorhus
-@license MIT
-*/
-
-'use strict';
-/* eslint-disable no-unused-vars */
-var getOwnPropertySymbols = Object.getOwnPropertySymbols;
-var hasOwnProperty = Object.prototype.hasOwnProperty;
-var propIsEnumerable = Object.prototype.propertyIsEnumerable;
-
-function toObject(val) {
-	if (val === null || val === undefined) {
-		throw new TypeError('Object.assign cannot be called with null or undefined');
-	}
-
-	return Object(val);
-}
-
-function shouldUseNative() {
-	try {
-		if (!Object.assign) {
-			return false;
-		}
-
-		// Detect buggy property enumeration order in older V8 versions.
-
-		// https://bugs.chromium.org/p/v8/issues/detail?id=4118
-		var test1 = new String('abc');  // eslint-disable-line no-new-wrappers
-		test1[5] = 'de';
-		if (Object.getOwnPropertyNames(test1)[0] === '5') {
-			return false;
-		}
-
-		// https://bugs.chromium.org/p/v8/issues/detail?id=3056
-		var test2 = {};
-		for (var i = 0; i < 10; i++) {
-			test2['_' + String.fromCharCode(i)] = i;
-		}
-		var order2 = Object.getOwnPropertyNames(test2).map(function (n) {
-			return test2[n];
-		});
-		if (order2.join('') !== '0123456789') {
-			return false;
-		}
-
-		// https://bugs.chromium.org/p/v8/issues/detail?id=3056
-		var test3 = {};
-		'abcdefghijklmnopqrst'.split('').forEach(function (letter) {
-			test3[letter] = letter;
-		});
-		if (Object.keys(Object.assign({}, test3)).join('') !==
-				'abcdefghijklmnopqrst') {
-			return false;
-		}
-
-		return true;
-	} catch (err) {
-		// We don't expect any of the above to throw, but better to be safe.
-		return false;
-	}
-}
-
-module.exports = shouldUseNative() ? Object.assign : function (target, source) {
-	var from;
-	var to = toObject(target);
-	var symbols;
-
-	for (var s = 1; s < arguments.length; s++) {
-		from = Object(arguments[s]);
-
-		for (var key in from) {
-			if (hasOwnProperty.call(from, key)) {
-				to[key] = from[key];
-			}
-		}
-
-		if (getOwnPropertySymbols) {
-			symbols = getOwnPropertySymbols(from);
-			for (var i = 0; i < symbols.length; i++) {
-				if (propIsEnumerable.call(from, symbols[i])) {
-					to[symbols[i]] = from[symbols[i]];
-				}
-			}
-		}
-	}
-
-	return to;
-};
-
-},{}],42:[function(require,module,exports){
-(function (process){
-/**
- * Copyright (c) 2013-present, Facebook, Inc.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- */
-
-'use strict';
-
-var printWarning = function() {};
-
-if (process.env.NODE_ENV !== 'production') {
-  var ReactPropTypesSecret = require('./lib/ReactPropTypesSecret');
-  var loggedTypeFailures = {};
-
-  printWarning = function(text) {
-    var message = 'Warning: ' + text;
-    if (typeof console !== 'undefined') {
-      console.error(message);
-    }
-    try {
-      // --- Welcome to debugging React ---
-      // This error was thrown as a convenience so that you can use this stack
-      // to find the callsite that caused this warning to fire.
-      throw new Error(message);
-    } catch (x) {}
-  };
-}
-
-/**
- * Assert that the values match with the type specs.
- * Error messages are memorized and will only be shown once.
- *
- * @param {object} typeSpecs Map of name to a ReactPropType
- * @param {object} values Runtime values that need to be type-checked
- * @param {string} location e.g. "prop", "context", "child context"
- * @param {string} componentName Name of the component for error messages.
- * @param {?Function} getStack Returns the component stack.
- * @private
- */
-function checkPropTypes(typeSpecs, values, location, componentName, getStack) {
-  if (process.env.NODE_ENV !== 'production') {
-    for (var typeSpecName in typeSpecs) {
-      if (typeSpecs.hasOwnProperty(typeSpecName)) {
-        var error;
-        // Prop type validation may throw. In case they do, we don't want to
-        // fail the render phase where it didn't fail before. So we log it.
-        // After these have been cleaned up, we'll let them throw.
-        try {
-          // This is intentionally an invariant that gets caught. It's the same
-          // behavior as without this statement except with a better message.
-          if (typeof typeSpecs[typeSpecName] !== 'function') {
-            var err = Error(
-              (componentName || 'React class') + ': ' + location + ' type `' + typeSpecName + '` is invalid; ' +
-              'it must be a function, usually from the `prop-types` package, but received `' + typeof typeSpecs[typeSpecName] + '`.'
-            );
-            err.name = 'Invariant Violation';
-            throw err;
-          }
-          error = typeSpecs[typeSpecName](values, typeSpecName, componentName, location, null, ReactPropTypesSecret);
-        } catch (ex) {
-          error = ex;
-        }
-        if (error && !(error instanceof Error)) {
-          printWarning(
-            (componentName || 'React class') + ': type specification of ' +
-            location + ' `' + typeSpecName + '` is invalid; the type checker ' +
-            'function must return `null` or an `Error` but returned a ' + typeof error + '. ' +
-            'You may have forgotten to pass an argument to the type checker ' +
-            'creator (arrayOf, instanceOf, objectOf, oneOf, oneOfType, and ' +
-            'shape all require an argument).'
-          )
-
-        }
-        if (error instanceof Error && !(error.message in loggedTypeFailures)) {
-          // Only monitor this failure once because there tends to be a lot of the
-          // same error.
-          loggedTypeFailures[error.message] = true;
-
-          var stack = getStack ? getStack() : '';
-
-          printWarning(
-            'Failed ' + location + ' type: ' + error.message + (stack != null ? stack : '')
-          );
-        }
-      }
-    }
-  }
-}
-
-module.exports = checkPropTypes;
-
-}).call(this,require('_process'))
-},{"./lib/ReactPropTypesSecret":43,"_process":13}],43:[function(require,module,exports){
-/**
- * Copyright (c) 2013-present, Facebook, Inc.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- */
-
-'use strict';
-
-var ReactPropTypesSecret = 'SECRET_DO_NOT_PASS_THIS_OR_YOU_WILL_BE_FIRED';
-
-module.exports = ReactPropTypesSecret;
-
-},{}],44:[function(require,module,exports){
-(function (process){
+}).call(this)}).call(this,require('_process'))
+},{"./cjs/react-dom.development.js":41,"./cjs/react-dom.production.min.js":42,"_process":33}],44:[function(require,module,exports){
+(function (process){(function (){
 /** @license React v16.3.2
  * react.development.js
  *
@@ -29866,8 +29582,8 @@ module.exports = react;
   })();
 }
 
-}).call(this,require('_process'))
-},{"_process":13,"fbjs/lib/emptyFunction":47,"fbjs/lib/emptyObject":48,"fbjs/lib/invariant":49,"fbjs/lib/warning":50,"object-assign":51,"prop-types/checkPropTypes":52}],45:[function(require,module,exports){
+}).call(this)}).call(this,require('_process'))
+},{"_process":33,"fbjs/lib/emptyFunction":18,"fbjs/lib/emptyObject":19,"fbjs/lib/invariant":23,"fbjs/lib/warning":27,"object-assign":28,"prop-types/checkPropTypes":34}],45:[function(require,module,exports){
 /** @license React v16.3.2
  * react.production.min.js
  *
@@ -29891,8 +29607,8 @@ _calculateChangedBits:b,_defaultValue:a,_currentValue:a,_changedBits:0,Provider:
 (k=a.type.defaultProps);for(c in b)J.call(b,c)&&!K.hasOwnProperty(c)&&(d[c]=void 0===b[c]&&void 0!==k?k[c]:b[c])}c=arguments.length-2;if(1===c)d.children=e;else if(1<c){k=Array(c);for(var l=0;l<c;l++)k[l]=arguments[l+2];d.children=k}return{$$typeof:t,type:a.type,key:g,ref:h,props:d,_owner:f}},createFactory:function(a){var b=L.bind(null,a);b.type=a;return b},isValidElement:M,version:"16.3.2",__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED:{ReactCurrentOwner:I,assign:m}},X=Object.freeze({default:W}),
 Y=X&&W||X;module.exports=Y["default"]?Y["default"]:Y;
 
-},{"fbjs/lib/emptyFunction":47,"fbjs/lib/emptyObject":48,"fbjs/lib/invariant":49,"object-assign":51}],46:[function(require,module,exports){
-(function (process){
+},{"fbjs/lib/emptyFunction":18,"fbjs/lib/emptyObject":19,"fbjs/lib/invariant":23,"object-assign":28}],46:[function(require,module,exports){
+(function (process){(function (){
 'use strict';
 
 if (process.env.NODE_ENV === 'production') {
@@ -29901,30 +29617,331 @@ if (process.env.NODE_ENV === 'production') {
   module.exports = require('./cjs/react.development.js');
 }
 
-}).call(this,require('_process'))
-},{"./cjs/react.development.js":44,"./cjs/react.production.min.js":45,"_process":13}],47:[function(require,module,exports){
-arguments[4][31][0].apply(exports,arguments)
-},{"dup":31}],48:[function(require,module,exports){
-arguments[4][32][0].apply(exports,arguments)
-},{"_process":13,"dup":32}],49:[function(require,module,exports){
-arguments[4][36][0].apply(exports,arguments)
-},{"_process":13,"dup":36}],50:[function(require,module,exports){
-arguments[4][40][0].apply(exports,arguments)
-},{"./emptyFunction":47,"_process":13,"dup":40}],51:[function(require,module,exports){
-arguments[4][41][0].apply(exports,arguments)
-},{"dup":41}],52:[function(require,module,exports){
-arguments[4][42][0].apply(exports,arguments)
-},{"./lib/ReactPropTypesSecret":53,"_process":13,"dup":42}],53:[function(require,module,exports){
-arguments[4][43][0].apply(exports,arguments)
-},{"dup":43}],54:[function(require,module,exports){
+}).call(this)}).call(this,require('_process'))
+},{"./cjs/react.development.js":44,"./cjs/react.production.min.js":45,"_process":33}],47:[function(require,module,exports){
+;(function() {
+'use strict'
+/* global define */
+
+var esprima
+var exportFn
+var toString = Object.prototype.toString
+
+if (typeof module === 'object' && typeof module.exports === 'object' && typeof require === 'function') {
+  // server side
+  esprima = require('esprima')
+  exportFn = function(redeyed) { module.exports = redeyed }
+  bootstrap(esprima, exportFn)
+} else if (typeof define === 'function' && define.amd) {
+  // client side
+  // amd
+  define(['esprima'], function(esprima) {
+      return bootstrap(esprima)
+  })
+} else if (typeof window === 'object') {
+  // no amd -> attach to window if it exists
+  // Note that this requires 'esprima' to be defined on the window, so that script has to be loaded first
+  window.redeyed = bootstrap(window.esprima)
+}
+
+function bootstrap(esprima, exportFn) {
+  function isFunction(obj) {
+    return toString.call(obj) === '[object Function]'
+  }
+
+  function isString(obj) {
+    return toString.call(obj) === '[object String]'
+  }
+
+  function isObject(obj) {
+    return toString.call(obj) === '[object Object]'
+  }
+
+  function surroundWith(before, after) {
+    return function(s) { return before + s + after }
+  }
+
+  function isNonCircular(key) {
+    return key !== '_parent'
+  }
+
+  function objectizeString(value) {
+    var vals = value.split(':')
+
+    if (vals.length === 0 || vals.length > 2)      {
+ throw new Error(
+        'illegal string config: ' + value +
+        '\nShould be of format "before:after"'
+      )
+}
+
+    if (vals.length === 1 || vals[1].length === 0) {
+      return vals.indexOf(':') < 0 ? { _before: vals[0] } : { _after: vals[0] }
+    } else {
+      return { _before: vals[0], _after: vals[1] }
+    }
+  }
+
+  function objectize(node) {
+    // Converts 'bef:aft' to { _before: bef, _after: aft }
+    // and resolves undefined before/after from parent or root
+
+    function resolve(value, key) {
+      // resolve before/after from root or parent if it isn't present on the current node
+      if (!value._parent) return undefined
+
+      // Immediate parent
+      if (value._parent._default && value._parent._default[key]) return value._parent._default[key]
+
+      // Root
+      var root = value._parent._parent
+      if (!root) return undefined
+
+      return root._default ? root._default[key] : undefined
+    }
+
+    function process(key) {
+      var value = node[key]
+
+      if (!value) return
+      if (isFunction(value)) return
+
+      // normalize all strings to objects
+      if (isString(value)) {
+        node[key] = value = objectizeString(value)
+      }
+
+      value._parent = node
+      if (isObject(value)) {
+        if (!value._before && !value._after) return objectize(value)
+
+        // resolve missing _before or _after from parent(s)
+        // in case we only have either one on this node
+        value._before =  value._before || resolve(value, '_before')
+        value._after  =  value._after  || resolve(value, '_after')
+
+        return
+      }
+
+      throw new Error('nodes need to be either {String}, {Object} or {Function}.' + value + ' is neither.')
+    }
+
+    // Process _default ones first so children can resolve missing before/after from them
+    if (node._default) process('_default')
+
+    Object.keys(node)
+      .filter(function(key) {
+        return isNonCircular(key)
+          && node.hasOwnProperty(key)
+          && key !== '_before'
+          && key !== '_after'
+          && key !== '_default'
+      })
+      .forEach(process)
+  }
+
+  function functionize(node) {
+    Object.keys(node)
+      .filter(function(key) {
+        return isNonCircular(key) && node.hasOwnProperty(key)
+      })
+      .forEach(function(key) {
+        var value = node[key]
+
+        if (isFunction(value)) return
+
+        if (isObject(value)) {
+          if (!value._before && !value._after) return functionize(value)
+
+          // at this point before/after were "inherited" from the parent or root
+          // (see objectize)
+          var before = value._before || ''
+          var after = value._after || ''
+
+          node[key] = surroundWith(before, after)
+          return node[key]
+        }
+      })
+  }
+
+  function normalize(root) {
+    objectize(root)
+    functionize(root)
+  }
+
+  function mergeTokensAndComments(tokens, comments) {
+    var all = {}
+
+    function addToAllByRangeStart(t) { all[ t.range[0] ] = t }
+
+    tokens.forEach(addToAllByRangeStart)
+    comments.forEach(addToAllByRangeStart)
+
+    // keys are sorted automatically
+    return Object.keys(all)
+      .map(function(k) { return all[k] })
+  }
+
+  function redeyed(code, config, opts) {
+    opts = opts || {}
+    var parser = opts.parser || esprima
+    var jsx = !!opts.jsx
+    // tokenizer doesn't support JSX at this point (esprima@4.0.0)
+    // therefore we need to generate the AST via the parser not only to
+    // avoid the tokenizer from erroring but also to get JSXIdentifier tokens
+    var buildAst = jsx || !!opts.buildAst
+
+    var hashbang =  ''
+    var ast
+    var tokens
+    var comments
+    var lastSplitEnd = 0
+    var splits = []
+    var transformedCode
+    var all
+    var info
+
+    // Replace hashbang line with empty whitespaces to preserve token locations
+    if (code[0] === '#' && code[1] === '!') {
+      hashbang = code.substr(0, code.indexOf('\n') + 1)
+      code = Array.apply(0, Array(hashbang.length)).join(' ') + '\n' + code.substr(hashbang.length)
+    }
+
+    if (buildAst) {
+      ast = parser.parse(code, { tokens: true, comment: true, range: true, loc: true, tolerant: true, jsx: true })
+      tokens = ast.tokens
+      comments = ast.comments
+    } else {
+      tokens = []
+      comments = []
+      parser.tokenize(code, { range: true, loc: true, comment: true }, function(token) {
+        if (token.type === 'LineComment') {
+          token.type = 'Line'
+          comments.push(token)
+        } else if (token.type === 'BlockComment') {
+          token.type = 'Block'
+          comments.push(token)
+        } else {
+          // Optimistically upgrade 'static' to a keyword
+          if (token.type === 'Identifier' && token.value === 'static') token.type = 'Keyword'
+          tokens.push(token)
+        }
+      })
+    }
+    normalize(config)
+
+    function tokenIndex(tokens, tkn, start) {
+      var current
+      var rangeStart = tkn.range[0]
+
+      for (current = start; current < tokens.length; current++) {
+        if (tokens[current].range[0] === rangeStart) return current
+      }
+
+      throw new Error('Token %s not found at or after index: %d', tkn, start)
+    }
+
+    function process(surround) {
+      var result
+      var currentIndex
+      var nextIndex
+      var skip = 0
+      var splitEnd
+
+      result = surround(code.slice(start, end), info)
+      if (isObject(result)) {
+        splits.push(result.replacement)
+
+        currentIndex =  info.tokenIndex
+        nextIndex    =  tokenIndex(info.tokens, result.skipPastToken, currentIndex)
+        skip         =  nextIndex - currentIndex
+        splitEnd     =  skip > 0 ? tokens[nextIndex - 1].range[1] : end
+      } else {
+        splits.push(result)
+        splitEnd = end
+      }
+
+      return { skip: skip, splitEnd: splitEnd }
+    }
+
+    function addSplit(start, end, surround, info) {
+      var result
+      var skip = 0
+
+      if (start >= end) return
+      if (surround) {
+        result       =  process(surround)
+        skip         =  result.skip
+        lastSplitEnd =  result.splitEnd
+      } else {
+        splits.push(code.slice(start, end))
+        lastSplitEnd = end
+      }
+
+      return skip
+    }
+
+    all = mergeTokensAndComments(tokens, comments)
+    for (var tokenIdx = 0; tokenIdx < all.length; tokenIdx++) {
+      var token = all[tokenIdx]
+      var surroundForType = config[token.type]
+      var surround
+      var start
+      var end
+
+      // At least the type (e.g., 'Keyword') needs to be specified for the token to be surrounded
+      if (surroundForType) {
+        // root defaults are only taken into account while resolving before/after otherwise
+        // a root default would apply to everything, even if no type default was specified
+        surround = surroundForType
+          && surroundForType.hasOwnProperty(token.value)
+          && surroundForType[token.value]
+          && isFunction(surroundForType[token.value])
+            ? surroundForType[token.value]
+            : surroundForType._default
+
+        start = token.range[0]
+        end = token.range[1]
+
+        addSplit(lastSplitEnd, start)
+        info = { tokenIndex: tokenIdx, tokens: all, ast: ast, code: code }
+        tokenIdx += addSplit(start, end, surround, info)
+      }
+    }
+
+    if (lastSplitEnd < code.length) {
+      addSplit(lastSplitEnd, code.length)
+    }
+
+  if (!opts.nojoin) {
+    transformedCode = splits.join('')
+    if (hashbang.length > 0) {
+      transformedCode = hashbang + transformedCode.substr(hashbang.length)
+    }
+  }
+
+    return {
+        ast      :  ast
+      , tokens   :  tokens
+      , comments :  comments
+      , splits   :  splits
+      , code     :  transformedCode
+    }
+  }
+
+  return exportFn ? exportFn(redeyed) : redeyed
+}
+})()
+
+},{"esprima":13}],48:[function(require,module,exports){
 "use strict";
 
 exports.__esModule = true;
-exports.default = void 0;
+exports["default"] = void 0;
 
 var _computeScrollIntoView = _interopRequireDefault(require("compute-scroll-into-view"));
 
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
 
 function isOptionsObject(options) {
   return options === Object(options) && Object.keys(options).length !== 0;
@@ -29935,7 +29952,7 @@ function defaultBehavior(actions, behavior) {
     behavior = 'auto';
   }
 
-  var canSmoothScroll = 'scrollBehavior' in document.body.style;
+  var canSmoothScroll = ('scrollBehavior' in document.body.style);
   actions.forEach(function (_ref) {
     var el = _ref.el,
         top = _ref.top,
@@ -29973,202 +29990,24 @@ function getOptions(options) {
 }
 
 function scrollIntoView(target, options) {
+  var targetIsDetached = !target.ownerDocument.documentElement.contains(target);
+
   if (isOptionsObject(options) && typeof options.behavior === 'function') {
-    return options.behavior((0, _computeScrollIntoView.default)(target, options));
+    return options.behavior(targetIsDetached ? [] : (0, _computeScrollIntoView["default"])(target, options));
+  }
+
+  if (targetIsDetached) {
+    return;
   }
 
   var computeOptions = getOptions(options);
-  return defaultBehavior((0, _computeScrollIntoView.default)(target, computeOptions), computeOptions.behavior);
+  return defaultBehavior((0, _computeScrollIntoView["default"])(target, computeOptions), computeOptions.behavior);
 }
 
 var _default = scrollIntoView;
-exports.default = _default;
+exports["default"] = _default;
 module.exports = exports.default;
-},{"compute-scroll-into-view":55}],55:[function(require,module,exports){
-"use strict";
-
-exports.__esModule = true;
-exports.default = void 0;
-
-function isElement(el) {
-  return el != null && typeof el === 'object' && (el.nodeType === 1 || el.nodeType === 11);
-}
-
-function canOverflow(overflow, skipOverflowHiddenElements) {
-  if (skipOverflowHiddenElements && overflow === 'hidden') {
-    return false;
-  }
-
-  return overflow !== 'visible' && overflow !== 'clip';
-}
-
-function isScrollable(el, skipOverflowHiddenElements) {
-  if (el.clientHeight < el.scrollHeight || el.clientWidth < el.scrollWidth) {
-    var style = getComputedStyle(el, null);
-    return canOverflow(style.overflowY, skipOverflowHiddenElements) || canOverflow(style.overflowX, skipOverflowHiddenElements);
-  }
-
-  return false;
-}
-
-function alignNearest(scrollingEdgeStart, scrollingEdgeEnd, scrollingSize, scrollingBorderStart, scrollingBorderEnd, elementEdgeStart, elementEdgeEnd, elementSize) {
-  if (elementEdgeStart < scrollingEdgeStart && elementEdgeEnd > scrollingEdgeEnd || elementEdgeStart > scrollingEdgeStart && elementEdgeEnd < scrollingEdgeEnd) {
-    return 0;
-  }
-
-  if (elementEdgeStart < scrollingEdgeStart && elementSize < scrollingSize || elementEdgeEnd > scrollingEdgeEnd && elementSize > scrollingSize) {
-    return elementEdgeStart - scrollingEdgeStart - scrollingBorderStart;
-  }
-
-  if (elementEdgeEnd > scrollingEdgeEnd && elementSize < scrollingSize || elementEdgeStart < scrollingEdgeStart && elementSize > scrollingSize) {
-    return elementEdgeEnd - scrollingEdgeEnd + scrollingBorderEnd;
-  }
-
-  return 0;
-}
-
-var _default = function _default(target, options) {
-  var scrollMode = options.scrollMode,
-      block = options.block,
-      inline = options.inline,
-      boundary = options.boundary,
-      skipOverflowHiddenElements = options.skipOverflowHiddenElements;
-  var checkBoundary = typeof boundary === 'function' ? boundary : function (node) {
-    return node !== boundary;
-  };
-
-  if (!isElement(target)) {
-    throw new TypeError('Invalid target');
-  }
-
-  var scrollingElement = document.scrollingElement || document.documentElement;
-  var frames = [];
-  var cursor = target;
-
-  while (isElement(cursor) && checkBoundary(cursor)) {
-    cursor = cursor.parentNode || cursor.host;
-
-    if (cursor === scrollingElement) {
-      frames.push(cursor);
-      break;
-    }
-
-    if (cursor === document.body && isScrollable(cursor) && !isScrollable(document.documentElement)) {
-      continue;
-    }
-
-    if (isScrollable(cursor, skipOverflowHiddenElements)) {
-      frames.push(cursor);
-    }
-  }
-
-  var viewportWidth = window.visualViewport ? visualViewport.width : innerWidth;
-  var viewportHeight = window.visualViewport ? visualViewport.height : innerHeight;
-  var viewportX = window.scrollX || pageXOffset;
-  var viewportY = window.scrollY || pageYOffset;
-
-  var _target$getBoundingCl = target.getBoundingClientRect(),
-      targetHeight = _target$getBoundingCl.height,
-      targetWidth = _target$getBoundingCl.width,
-      targetTop = _target$getBoundingCl.top,
-      targetRight = _target$getBoundingCl.right,
-      targetBottom = _target$getBoundingCl.bottom,
-      targetLeft = _target$getBoundingCl.left;
-
-  var targetBlock = block === 'start' || block === 'nearest' ? targetTop : block === 'end' ? targetBottom : targetTop + targetHeight / 2;
-  var targetInline = inline === 'center' ? targetLeft + targetWidth / 2 : inline === 'end' ? targetRight : targetLeft;
-  var computations = [];
-
-  for (var index = 0; index < frames.length; index++) {
-    var frame = frames[index];
-
-    var _frame$getBoundingCli = frame.getBoundingClientRect(),
-        _height = _frame$getBoundingCli.height,
-        _width = _frame$getBoundingCli.width,
-        _top = _frame$getBoundingCli.top,
-        right = _frame$getBoundingCli.right,
-        bottom = _frame$getBoundingCli.bottom,
-        _left = _frame$getBoundingCli.left;
-
-    if (scrollMode === 'if-needed' && targetTop >= 0 && targetLeft >= 0 && targetBottom <= viewportHeight && targetRight <= viewportWidth && targetTop >= _top && targetBottom <= bottom && targetLeft >= _left && targetRight <= right) {
-      return computations;
-    }
-
-    var frameStyle = getComputedStyle(frame);
-    var borderLeft = parseInt(frameStyle.borderLeftWidth, 10);
-    var borderTop = parseInt(frameStyle.borderTopWidth, 10);
-    var borderRight = parseInt(frameStyle.borderRightWidth, 10);
-    var borderBottom = parseInt(frameStyle.borderBottomWidth, 10);
-    var blockScroll = 0;
-    var inlineScroll = 0;
-    var scrollbarWidth = 'offsetWidth' in frame ? frame.offsetWidth - frame.clientWidth - borderLeft - borderRight : 0;
-    var scrollbarHeight = 'offsetHeight' in frame ? frame.offsetHeight - frame.clientHeight - borderTop - borderBottom : 0;
-
-    if (scrollingElement === frame) {
-      if (block === 'start') {
-        blockScroll = targetBlock;
-      } else if (block === 'end') {
-        blockScroll = targetBlock - viewportHeight;
-      } else if (block === 'nearest') {
-        blockScroll = alignNearest(viewportY, viewportY + viewportHeight, viewportHeight, borderTop, borderBottom, viewportY + targetBlock, viewportY + targetBlock + targetHeight, targetHeight);
-      } else {
-        blockScroll = targetBlock - viewportHeight / 2;
-      }
-
-      if (inline === 'start') {
-        inlineScroll = targetInline;
-      } else if (inline === 'center') {
-        inlineScroll = targetInline - viewportWidth / 2;
-      } else if (inline === 'end') {
-        inlineScroll = targetInline - viewportWidth;
-      } else {
-        inlineScroll = alignNearest(viewportX, viewportX + viewportWidth, viewportWidth, borderLeft, borderRight, viewportX + targetInline, viewportX + targetInline + targetWidth, targetWidth);
-      }
-
-      blockScroll = Math.max(0, blockScroll + viewportY);
-      inlineScroll = Math.max(0, inlineScroll + viewportX);
-    } else {
-      if (block === 'start') {
-        blockScroll = targetBlock - _top - borderTop;
-      } else if (block === 'end') {
-        blockScroll = targetBlock - bottom + borderBottom + scrollbarHeight;
-      } else if (block === 'nearest') {
-        blockScroll = alignNearest(_top, bottom, _height, borderTop, borderBottom + scrollbarHeight, targetBlock, targetBlock + targetHeight, targetHeight);
-      } else {
-        blockScroll = targetBlock - (_top + _height / 2) + scrollbarHeight / 2;
-      }
-
-      if (inline === 'start') {
-        inlineScroll = targetInline - _left - borderLeft;
-      } else if (inline === 'center') {
-        inlineScroll = targetInline - (_left + _width / 2) + scrollbarWidth / 2;
-      } else if (inline === 'end') {
-        inlineScroll = targetInline - right + borderRight + scrollbarWidth;
-      } else {
-        inlineScroll = alignNearest(_left, right, _width, borderLeft, borderRight + scrollbarWidth, targetInline, targetInline + targetWidth, targetWidth);
-      }
-
-      var scrollLeft = frame.scrollLeft,
-          scrollTop = frame.scrollTop;
-      blockScroll = Math.max(0, Math.min(scrollTop + blockScroll, frame.scrollHeight - _height + scrollbarHeight));
-      inlineScroll = Math.max(0, Math.min(scrollLeft + inlineScroll, frame.scrollWidth - _width + scrollbarWidth));
-      targetBlock += scrollTop - blockScroll;
-      targetInline += scrollLeft - inlineScroll;
-    }
-
-    computations.push({
-      el: frame,
-      top: blockScroll,
-      left: inlineScroll
-    });
-  }
-
-  return computations;
-};
-
-exports.default = _default;
-module.exports = exports["default"];
-},{}],56:[function(require,module,exports){
+},{"compute-scroll-into-view":12}],49:[function(require,module,exports){
 'use strict'
 
 const peacock = require('peacock')
@@ -30389,7 +30228,7 @@ class ThemeBrowser {
 
 module.exports = ThemeBrowser
 
-},{"peacock":16}],57:[function(require,module,exports){
+},{"peacock":30}],50:[function(require,module,exports){
 'use strict'
 
 /* eslint-disable camelcase */
@@ -30666,7 +30505,7 @@ module.exports = {
   , deoptigate
 }
 
-},{"./lib/grouping/group-by-file-and-location":58,"./lib/log-processing/code-entry":61,"./lib/log-processing/deopt-entry":62,"./lib/log-processing/ic-entry":63,"./lib/log-processing/optimization-state":65,"v8-tools-core/logreader":71,"v8-tools-core/profile":72}],58:[function(require,module,exports){
+},{"./lib/grouping/group-by-file-and-location":51,"./lib/log-processing/code-entry":54,"./lib/log-processing/deopt-entry":55,"./lib/log-processing/ic-entry":56,"./lib/log-processing/optimization-state":59,"v8-tools-core/logreader":65,"v8-tools-core/profile":66}],51:[function(require,module,exports){
 'use strict'
 
 const {
@@ -30760,7 +30599,7 @@ function groupByFileAndLocation(groupedByFile) {
 
 module.exports = groupByFileAndLocation
 
-},{"./location":59}],59:[function(require,module,exports){
+},{"./location":52}],52:[function(require,module,exports){
 'use strict'
 
 function keyLocation({ functionName, line, column }) {
@@ -30796,7 +30635,7 @@ module.exports = {
   , byLocationKey
 }
 
-},{}],60:[function(require,module,exports){
+},{}],53:[function(require,module,exports){
 'use strict'
 
 const { highestSeverity, lowestSeverity } = require('../severities')
@@ -30808,11 +30647,7 @@ function addLastCodeState(codeStates, updates) {
   codeStates[lastState]++
 }
 
-function summarizeFile(ref) {
-  var ics = ref.ics;
-  var deopts = ref.deopts;
-  var codes = ref.codes;
-
+function summarizeFile({ ics, deopts, codes }) {
   const icSeverities = [ 0, 0, 0, 0 ]
   const deoptSeverities = [ 0, 0, 0, 0 ]
   const codeSeverities = [ 0, 0, 0, 0 ]
@@ -30832,7 +30667,7 @@ function summarizeFile(ref) {
     let hs = lowestSeverity(updates)
     // if there are lots of updates that means the function was optimized a lot
     // which could point to an issue
-    if (updates.length > 3) { hs = Math.max(hs, 3) }
+    if (updates.length > 3) hs = Math.max(hs, 3)
     codeSeverities[hs]++
     codeVector.severity = hs
     addLastCodeState(codeStates, updates)
@@ -30869,15 +30704,12 @@ function summarizeFile(ref) {
 
 module.exports = summarizeFile
 
-},{"../severities":68}],61:[function(require,module,exports){
+},{"../severities":62}],54:[function(require,module,exports){
 'use strict'
 
 const { severityOfOptimizationState }  = require('./optimization-state')
 
-function normalizeFile(file) {
-  // Node.js adds :line:column to the end
-  return file.split(':')[0]
-}
+const normalizeFile = require('./normalize-file');
 
 class CodeEntry {
   constructor({ fnFile, line, column, isScript }) {
@@ -30910,7 +30742,7 @@ class CodeEntry {
 
 module.exports = CodeEntry
 
-},{"./optimization-state":65}],62:[function(require,module,exports){
+},{"./normalize-file":58,"./optimization-state":59}],55:[function(require,module,exports){
 'use strict'
 
 /* eslint-disable camelcase */
@@ -30996,7 +30828,7 @@ class DeoptEntry {
 
 module.exports = DeoptEntry
 
-},{"../severities":68}],63:[function(require,module,exports){
+},{"../severities":62}],56:[function(require,module,exports){
 'use strict'
 
 const {
@@ -31004,10 +30836,7 @@ const {
   , severityIcState
 } = require('./ic-state')
 
-function normalizeFile(file) {
-  // Node.js adds :line:column to the end
-  return file.split(':')[0]
-}
+const normalizeFile = require('./normalize-file');
 
 function unquote(s) {
   // for some reason Node.js double quotes the file names
@@ -31066,7 +30895,7 @@ class IcEntry {
 
 module.exports = IcEntry
 
-},{"./ic-state":64}],64:[function(require,module,exports){
+},{"./ic-state":57,"./normalize-file":58}],57:[function(require,module,exports){
 'use strict'
 
 const { MIN_SEVERITY } = require('../severities')
@@ -31124,7 +30953,19 @@ module.exports = {
   , severityIcState
 }
 
-},{"../severities":68}],65:[function(require,module,exports){
+},{"../severities":62}],58:[function(require,module,exports){
+const BROWSER_TRACE_RE = /(.*):([0-9]+):([0-9]+)$/
+
+module.exports = function normalizeFile(file) {
+  // Node.js adds :line:column to the end
+  if (file.indexOf('https://') === 0 || file.indexOf('http://') === 0 || file.indexOf('file:') === 0) {
+    const array = BROWSER_TRACE_RE.exec(file)
+    return !array ? file : array[1];
+  }
+  return file.split(':')[0]
+}
+
+},{}],59:[function(require,module,exports){
 'use strict'
 
 const { Profile } = require('v8-tools-core/profile')
@@ -31164,19 +31005,19 @@ module.exports = {
   , severityOfOptimizationState
 }
 
-},{"v8-tools-core/profile":72}],66:[function(require,module,exports){
+},{"v8-tools-core/profile":66}],60:[function(require,module,exports){
 'use strict'
 
 function getDigits(n) {
-  if (n < 10) { return 1 }
-  if (n < 1E2) { return 2 }
-  if (n < 1E3) { return 3 }
-  if (n < 1E4) { return 4 }
-  if (n < 1E5) { return 5 }
-  if (n < 1E6) { return 6 }
-  if (n < 1E7) { return 2 }
-  if (n < 1E8) { return 8 }
-  if (n < 1E9) { return 9 }
+  if (n < 10) return 1
+  if (n < 1E2) return 2
+  if (n < 1E3) return 3
+  if (n < 1E4) return 4
+  if (n < 1E5) return 5
+  if (n < 1E6) return 6
+  if (n < 1E7) return 2
+  if (n < 1E8) return 8
+  if (n < 1E9) return 9
   return 10
 }
 
@@ -31213,19 +31054,27 @@ function processLine(line, markerResolver, next, lineno, totalDigits) {
     next = markerResolver.nextLocation()
   }
   do {
-    if (next == null) { break }
+    if (next == null) break
     // Work our way to the column of the next marker
     while (column < (next.column - 1) && column < cols) {
       s += line[column++]
-      if (column >= cols) { break }
+      if (column >= cols) break
     }
     insert()
   } while (next != null && next.line === lineno && column < cols)
 
   // Add remaining columns (after the last marker for this line)
-  if (column < cols) { s += line.slice(column + 1) }
+  if (column < cols) s += line.slice(column + 1)
 
   return { renderedLine: `<span>${pad(lineno + 1, totalDigits)}: </span><span>${s}</span><br>`, nextLocation: next }
+}
+
+
+const sanitizer = document.createElement('div');
+
+function sanitize(code) {
+  sanitizer.innerHTML = code;
+  return sanitizer.innerText;
 }
 
 function markOnly(code, markerResolver) {
@@ -31237,7 +31086,7 @@ function markOnly(code, markerResolver) {
   for (let lineno = 0; lineno < len; lineno++) {
     const line = lines[lineno]
     if (next == null || next.line > (lineno + 1)) {
-      result += `<span>${pad(lineno + 1, totalDigits)}: </span><span>${line}</span><br>`
+      result += `<span>${pad(lineno + 1, totalDigits)}: ${sanitize(line)}</span><br>`
       continue
     }
     const { renderedLine, nextLocation } = processLine(line, markerResolver, next, lineno, totalDigits)
@@ -31249,7 +31098,7 @@ function markOnly(code, markerResolver) {
 
 module.exports = markOnly
 
-},{}],67:[function(require,module,exports){
+},{}],61:[function(require,module,exports){
 'use strict'
 
 const { severityColors, MIN_SEVERITY } = require('../severities')
@@ -31261,16 +31110,16 @@ const ICSYMBOL = '☎'
 const CODESYMBOL = '▲'
 
 function applyMark(codeLocation, markerLocation) {
-  if (codeLocation.line > markerLocation.line) { return true }
-  if (codeLocation.line < markerLocation.line) { return false }
-  if (codeLocation.column < markerLocation.column) { return false }
+  if (codeLocation.line > markerLocation.line) return true
+  if (codeLocation.line < markerLocation.line) return false
+  if (codeLocation.column < markerLocation.column) return false
   return true
 }
 
 function highSeverity(map) {
   const res = new Map()
   for (const [ key, info ] of map) {
-    if (info.severity === MIN_SEVERITY) { continue }
+    if (info.severity === MIN_SEVERITY) continue
     res.set(key, info)
   }
   return res
@@ -31281,16 +31130,16 @@ function includedIn(map, arr) {
 }
 
 class MarkerResolver {
-  constructor(ref) {
-  var ics = ref.ics;
-  var deopts = ref.deopts;
-  var codes = ref.codes;
-  var icLocations = ref.icLocations;
-  var deoptLocations = ref.deoptLocations;
-  var codeLocations = ref.codeLocations;
-  var selectedLocation = ref.selectedLocation; if ( selectedLocation === void 0 ) selectedLocation = null;
-  var includeAllSeverities = ref.includeAllSeverities; if ( includeAllSeverities === void 0 ) includeAllSeverities = true;
-
+  constructor({
+      ics
+    , deopts
+    , codes
+    , icLocations
+    , deoptLocations
+    , codeLocations
+    , selectedLocation = null
+    , includeAllSeverities = true
+  }) {
     assert(ics == null || icLocations != null, 'need to provide locations for ics')
     assert(deopts == null || deoptLocations != null, 'need to provide locations for deopts')
     assert(codes == null || codeLocations != null, 'need to provide locations for codes')
@@ -31337,16 +31186,16 @@ class MarkerResolver {
     const nextDeopt = unkeyLocation(this._deoptLocations[this._deoptLocationIdx])
     const nextOpt = unkeyLocation(this._codeLocations[this._codeLocationIdx])
     return [ nextDeopt, nextOpt ].reduce((next, loc) => {
-      if (next == null) { return loc }
-      if (loc == null) { return next }
-      if (next.line > loc.line) { return loc }
-      if (next.line < loc.line) { return next }
+      if (next == null) return loc
+      if (loc == null) return next
+      if (next.line > loc.line) return loc
+      if (next.line < loc.line) return next
       return next.column < loc.column ? next : loc
     }, nextIc)
   }
 
   _resolveDeopt(codeLocation) {
-    if (this._deopts == null) { return '' }
+    if (this._deopts == null) return ''
     const { before, after, locationIdx } = this._resolve({
         codeLocation
       , map         : this._deopts
@@ -31358,7 +31207,7 @@ class MarkerResolver {
   }
 
   _resolveIc(codeLocation) {
-    if (this._ics == null) { return '' }
+    if (this._ics == null) return ''
     const { before, after, locationIdx } = this._resolve({
         codeLocation
       , map         : this._ics
@@ -31370,7 +31219,7 @@ class MarkerResolver {
   }
 
   _resolveCode(loc) {
-    if (this._codes == null) { return '' }
+    if (this._codes == null) return ''
     const { before, after, locationIdx } = this._resolve({
         codeLocation: loc
       , map         : this._codes
@@ -31381,12 +31230,7 @@ class MarkerResolver {
     return { before, after }
   }
 
-  _resolve(ref) {
-    var map = ref.map;
-    var codeLocation = ref.codeLocation;
-    var locationIdx = ref.locationIdx;
-    var locations = ref.locations;
-
+  _resolve({ map, codeLocation, locationIdx, locations }) {
     let before = ''
     let after = ''
 
@@ -31398,8 +31242,8 @@ class MarkerResolver {
       applyMark(codeLocation, currentLocation)
     ) {
       const { result, placeBefore } = this._determineMarkerSymbol(map, locationKey)
-      if (placeBefore) { before += result }
-      else { after += result }
+      if (placeBefore) before += result
+      else after += result
       locationIdx++
       locationKey = locations[locationIdx]
       currentLocation = unkeyLocation(locationKey)
@@ -31448,7 +31292,7 @@ class MarkerResolver {
 
 module.exports = MarkerResolver
 
-},{"../grouping/location":59,"../severities":68,"assert":8}],68:[function(require,module,exports){
+},{"../grouping/location":52,"../severities":62,"assert":8}],62:[function(require,module,exports){
 'use strict'
 
 const severityColors = [
@@ -31460,22 +31304,14 @@ const severityColors = [
 const MIN_SEVERITY = 1
 function highestSeverity(infos) {
   return infos.reduce(
-      (highest, ref) => {
-        var severity = ref.severity;
-
-        return severity > highest ? severity : highest;
-  }
+      (highest, { severity }) => severity > highest ? severity : highest
     , MIN_SEVERITY
   )
 }
 
 function lowestSeverity(infos) {
   return infos.reduce(
-      (lowest, ref) => {
-        var severity = ref.severity;
-
-        return severity < lowest ? severity : lowest;
-  }
+      (lowest, { severity }) => severity < lowest ? severity : lowest
     , 99
   )
 }
@@ -31487,7 +31323,7 @@ module.exports = {
   , lowestSeverity
 }
 
-},{}],69:[function(require,module,exports){
+},{}],63:[function(require,module,exports){
 // Copyright 2009 the V8 project authors. All rights reserved.
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -31814,7 +31650,7 @@ if (typeof module === 'object' && typeof module.exports === 'object') {
   module.exports = CodeMap;
 } 
 
-},{"./splaytree.js":73}],70:[function(require,module,exports){
+},{"./splaytree.js":67}],64:[function(require,module,exports){
 // Copyright 2009 the V8 project authors. All rights reserved.
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -31922,7 +31758,7 @@ if (typeof module === 'object' && typeof module.exports === 'object') {
   module.exports = CsvParser;
 } 
 
-},{}],71:[function(require,module,exports){
+},{}],65:[function(require,module,exports){
 // Copyright 2011 the V8 project authors. All rights reserved.
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -32164,7 +32000,7 @@ if (typeof module === 'object' && typeof module.exports === 'object') {
   module.exports = LogReader;
 } 
 
-},{"./csvparser.js":70}],72:[function(require,module,exports){
+},{"./csvparser.js":64}],66:[function(require,module,exports){
 // Copyright 2009 the V8 project authors. All rights reserved.
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -33298,7 +33134,7 @@ JsonProfile.prototype.writeJson = function() {
   write('}\n');
 };
 
-},{"./codemap.js":69}],73:[function(require,module,exports){
+},{"./codemap.js":63}],67:[function(require,module,exports){
 // Copyright 2009 the V8 project authors. All rights reserved.
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
